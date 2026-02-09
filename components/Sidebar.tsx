@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   LayoutDashboard, 
@@ -66,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
     <aside className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0 z-40 shadow-sm">
       <div className="p-6 flex items-center gap-3">
         <div className="w-12 h-12 flex items-center justify-center">
-            <img src={logoUrl} alt="FutSystem Logo" className="w-full h-full object-contain" />
+            <img src={logoUrl} alt="FutSystem Logo" className="w-full h-full object-contain rounded-[10px]" />
         </div>
         <h1 className="text-xl font-black text-brand-purple italic uppercase tracking-tighter">
           FutSystem
@@ -83,7 +82,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
             <button
               key={link.path}
               onClick={() => onNavigate(link.path)}
-              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold transition-all ${
+              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[10px] text-sm font-bold transition-all ${
                 isActive 
                   ? 'bg-brand-purple text-white shadow-xl shadow-brand-purple/20' 
                   : 'text-slate-500 hover:bg-slate-50 hover:text-brand-purple'
@@ -93,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
                 <Icon size={18} className={isWhatsApp && !isActive ? 'text-[#00c67d]' : ''} />
                 {link.name}
               </div>
-              {isWhatsApp && isActive && <div className="w-1.5 h-1.5 rounded-full bg-[#00c67d] animate-pulse" />}
+              {isWhatsApp && isActive && <div className="w-1.5 h-1.5 rounded-[10px] bg-[#00c67d] animate-pulse" />}
             </button>
           );
         })}
@@ -102,7 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
       <div className="p-4 border-t border-slate-100">
         <button 
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-2xl transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-[10px] transition-all"
         >
           <LogOut size={18} />
           Sair do FutSystem

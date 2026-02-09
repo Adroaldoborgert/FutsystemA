@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
   LineChart, 
@@ -38,15 +37,15 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ schools }) => {
           <h2 className="text-2xl font-bold text-slate-800">Controle de MRR Global</h2>
           <p className="text-slate-500">Visão geral financeira do ecossistema SaaS</p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 shadow-sm">
+        <div className="bg-white px-4 py-2 rounded-[10px] border border-slate-200 text-sm font-medium text-slate-600 shadow-sm">
           Última atualização: Hoje, 09:41
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-6 rounded-[10px] border border-slate-200 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
+            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-[10px]">
               <DollarSign size={24} />
             </div>
             <div>
@@ -60,9 +59,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ schools }) => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-6 rounded-[10px] border border-slate-200 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-[10px]">
               <Building size={24} />
             </div>
             <div>
@@ -75,9 +74,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ schools }) => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-6 rounded-[10px] border border-slate-200 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-[10px]">
               <Users size={24} />
             </div>
             <div>
@@ -90,9 +89,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ schools }) => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-6 rounded-[10px] border border-slate-200 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-lg">
+            <div className="p-3 bg-amber-50 text-amber-600 rounded-[10px]">
               <DollarSign size={24} />
             </div>
             <div>
@@ -106,7 +105,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ schools }) => {
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      <div className="bg-white p-6 rounded-[10px] border border-slate-200 shadow-sm">
         <h3 className="text-lg font-bold text-slate-800 mb-6">Crescimento de Receita Recorrente (MRR)</h3>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -121,7 +120,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ schools }) => {
               <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} tickFormatter={(value) => `R$${value/1000}k`} />
               <Tooltip 
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR')}`, 'MRR']}
               />
               <Area type="monotone" dataKey="mrr" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorMrr)" />

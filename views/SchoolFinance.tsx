@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
@@ -504,29 +503,29 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-8 pb-4 flex justify-between items-center bg-slate-50/50">
+            <div className="p-5 pb-2 flex justify-between items-center bg-slate-50/50">
               <div>
-                <h3 className="text-2xl font-black text-slate-800 italic uppercase tracking-tighter">
+                <h3 className="text-xl font-black text-slate-800 italic uppercase tracking-tighter">
                   {editingTransaction ? 'Editar Lançamento' : 'Novo Lançamento'}
                 </h3>
-                <p className="text-xs text-slate-500 font-medium italic">Gerencie mensalidades, matrículas e kits</p>
+                <p className="text-[10px] text-slate-500 font-medium italic uppercase">Gerencie mensalidades, matrículas e kits</p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-white rounded-full">
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
             
-            <form onSubmit={handleFormSubmit} className="p-8 space-y-5">
+            <form onSubmit={handleFormSubmit} className="p-5 space-y-3">
               {/* Seleção de Tipo de Lançamento */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Tipo de Lançamento</label>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Tipo de Lançamento</label>
                 <div className="grid grid-cols-3 gap-2">
                   {['Mensalidade', 'Matrícula', 'Uniforme'].map((type) => (
                     <button
                       key={type}
                       type="button"
                       onClick={() => setLaunchType(type)}
-                      className={`py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                      className={`py-1.5 px-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${
                         launchType === type 
                           ? 'bg-violet-700 text-white border-violet-700 shadow-md' 
                           : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'
@@ -538,13 +537,13 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Aluno Responsável</label>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Aluno Responsável</label>
                 <div className="relative">
                   <select 
                     required 
                     disabled={!!editingTransaction}
-                    className={`w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none appearance-none font-bold italic ${editingTransaction ? 'opacity-60 cursor-not-allowed' : 'focus:ring-2 focus:ring-indigo-500/10'}`} 
+                    className={`w-full p-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none appearance-none font-bold italic text-sm ${editingTransaction ? 'opacity-60 cursor-not-allowed' : 'focus:ring-2 focus:ring-indigo-500/10'}`} 
                     value={formData.athleteId} 
                     onChange={e => { 
                       const ath = athletes.find(a => a.id === e.target.value); 
@@ -554,51 +553,51 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
                     <option value="">Selecione um aluno...</option>
                     {athletes.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
-                  {!editingTransaction && <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={20} />}
+                  {!editingTransaction && <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={16} />}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Valor (R$)</label>
-                  <input required type="number" step="0.01" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-black italic text-indigo-600 focus:ring-2 focus:ring-indigo-500/10" value={formData.amount} onChange={e => setFormData({...formData, amount: Number(e.target.value)})} />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Valor (R$)</label>
+                  <input required type="number" step="0.01" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-black italic text-indigo-600 focus:ring-2 focus:ring-indigo-500/10 text-sm" value={formData.amount} onChange={e => setFormData({...formData, amount: Number(e.target.value)})} />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Data de Vencimento</label>
-                  <input required type="date" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold italic text-slate-600 focus:ring-2 focus:ring-indigo-500/10" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} />
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Vencimento</label>
+                  <input required type="date" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-bold italic text-slate-600 focus:ring-2 focus:ring-indigo-500/10 text-sm" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} />
                 </div>
               </div>
 
               {launchType === 'Mensalidade' ? (
-                <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Mês Competência</label>
-                    <select className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-bold text-slate-600" value={compMonth} onChange={e => setCompMonth(e.target.value)}>
+                <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2">
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Mês Competência</label>
+                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-bold text-slate-600 text-sm" value={compMonth} onChange={e => setCompMonth(e.target.value)}>
                         {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Ano Competência</label>
-                    <select className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-black text-slate-600" value={compYear} onChange={e => setCompYear(e.target.value)}>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Ano Competência</label>
+                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-black text-slate-600 text-sm" value={compYear} onChange={e => setCompYear(e.target.value)}>
                         {YEARS.map(y => <option key={y} value={y.toString()}>{y}</option>)}
                     </select>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-1.5 animate-in slide-in-from-top-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Descrição do Lançamento</label>
-                  <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-3">
-                    <Tags size={18} className="text-indigo-600" />
-                    <span className="text-sm font-bold text-indigo-800 italic">{launchType}</span>
+                <div className="space-y-1 animate-in slide-in-from-top-2">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Descrição do Lançamento</label>
+                  <div className="p-2 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-2">
+                    <Tags size={14} className="text-indigo-600" />
+                    <span className="text-xs font-bold text-indigo-800 italic">{launchType}</span>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Status</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Status</label>
                   <select 
-                    className={`w-full p-4 border rounded-2xl outline-none font-black italic uppercase tracking-tighter focus:ring-2 focus:ring-indigo-500/10 ${
+                    className={`w-full p-2 border rounded-2xl outline-none font-black italic uppercase tracking-tighter focus:ring-2 focus:ring-indigo-500/10 text-xs ${
                       formData.status === 'paid' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 
                       formData.status === 'overdue' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-amber-50 border-amber-200 text-amber-600'
                     }`}
@@ -611,12 +610,12 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
                   </select>
                 </div>
                 {formData.status === 'paid' && (
-                  <div className="space-y-1.5 animate-in slide-in-from-right-2 duration-300">
-                    <label className="text-[10px] font-black text-emerald-500 uppercase tracking-widest italic">Data do Pagamento</label>
+                  <div className="space-y-1 animate-in slide-in-from-right-2 duration-300">
+                    <label className="text-[9px] font-black text-emerald-500 uppercase tracking-widest italic">Data do Pagamento</label>
                     <input 
                       required 
                       type="date" 
-                      className="w-full p-4 bg-emerald-50 border border-emerald-200 rounded-2xl outline-none font-bold italic text-emerald-700" 
+                      className="w-full p-2 bg-emerald-50 border border-emerald-200 rounded-2xl outline-none font-bold italic text-emerald-700 text-sm" 
                       value={formData.paymentDate || new Date().toISOString().split('T')[0]} 
                       onChange={e => setFormData({...formData, paymentDate: e.target.value})} 
                     />
@@ -624,10 +623,10 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
                 )}
               </div>
 
-              <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 text-slate-600 font-bold hover:bg-slate-50 rounded-2xl transition-all shadow-sm border border-slate-100 italic">Cancelar</button>
-                <button type="submit" className="flex-2 py-4 bg-violet-700 text-white font-black rounded-2xl hover:bg-violet-800 transition-all shadow-xl shadow-violet-100 italic uppercase tracking-widest active:scale-95">
-                  {editingTransaction ? 'Salvar Alterações' : 'Confirmar Lançamento'}
+              <div className="pt-2 flex gap-3">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2.5 text-slate-600 font-bold hover:bg-slate-50 rounded-2xl transition-all shadow-sm border border-slate-100 italic text-xs">Cancelar</button>
+                <button type="submit" className="flex-2 py-2.5 bg-violet-700 text-white font-black rounded-2xl hover:bg-violet-800 transition-all shadow-xl shadow-violet-100 italic uppercase tracking-widest active:scale-95 text-xs">
+                  {editingTransaction ? 'Salvar Alterações' : 'Confirmar'}
                 </button>
               </div>
             </form>
@@ -638,19 +637,19 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
       {isDeleteConfirmOpen && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4">
               <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-md overflow-hidden animate-in fade-in zoom-in duration-200 border-4 border-red-100">
-                  <div className="p-10 text-center space-y-6">
-                      <div className="w-24 h-24 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                          <Trash2 size={48} />
+                  <div className="p-8 text-center space-y-4">
+                      <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                          <Trash2 size={32} />
                       </div>
                       <div>
-                          <h3 className="text-3xl font-black text-slate-800 italic uppercase tracking-tighter">Apagar Registro?</h3>
-                          <p className="text-slate-500 mt-2 font-medium italic">
-                              Você está prestes a remover permanentemente a cobrança de <strong className="text-slate-700">{transactionToDelete?.athleteName}</strong>. Esta ação não pode ser desfeita.
+                          <h3 className="text-2xl font-black text-slate-800 italic uppercase tracking-tighter">Apagar Registro?</h3>
+                          <p className="text-slate-500 mt-1 font-medium italic text-sm">
+                              Você está prestes a remover permanentemente a cobrança de <strong className="text-slate-700">{transactionToDelete?.athleteName}</strong>.
                           </p>
                       </div>
                       <div className="flex gap-3 pt-2">
-                          <button onClick={() => setIsDeleteConfirmOpen(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all shadow-sm italic">Abortar</button>
-                          <button onClick={() => { if(transactionToDelete) onDeleteTransaction(transactionToDelete.id); setIsDeleteConfirmOpen(false); }} className="flex-1 py-4 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all shadow-lg shadow-red-100 italic uppercase tracking-widest">Sim, Excluir</button>
+                          <button onClick={() => setIsDeleteConfirmOpen(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all shadow-sm italic text-xs">Abortar</button>
+                          <button onClick={() => { if(transactionToDelete) onDeleteTransaction(transactionToDelete.id); setIsDeleteConfirmOpen(false); }} className="flex-1 py-3 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition-all shadow-lg shadow-red-100 italic uppercase tracking-widest text-xs">Sim, Excluir</button>
                       </div>
                   </div>
               </div>
@@ -660,38 +659,38 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
       {isBulkModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
               <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                  <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                       <div>
-                          <h3 className="text-2xl font-black text-slate-800 italic uppercase tracking-tighter">Parametrizar Geração</h3>
-                          <p className="text-xs text-slate-500 font-medium italic">Define os padrões para os novos lançamentos automáticos.</p>
+                          <h3 className="text-xl font-black text-slate-800 italic uppercase tracking-tighter">Parametrizar Geração</h3>
+                          <p className="text-[10px] text-slate-500 font-medium italic uppercase">Define os padrões para os novos lançamentos automáticos.</p>
                       </div>
                       <button onClick={() => setIsBulkModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-white rounded-full">
-                          <X size={24} />
+                          <X size={20} />
                       </button>
                   </div>
-                  <div className="p-10 space-y-6">
+                  <div className="p-8 space-y-5">
                       <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Competência Fiscal</label>
+                          <div className="space-y-1">
+                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Competência Fiscal</label>
                               <div className="flex gap-2">
-                                  <select className="flex-1 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-bold text-slate-600" value={bulkMonth} onChange={e => setBulkMonth(e.target.value)}>
+                                  <select className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-bold text-slate-600 text-sm" value={bulkMonth} onChange={e => setBulkMonth(e.target.value)}>
                                       {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
                                   </select>
-                                  <select className="w-24 p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-black text-slate-600" value={bulkYear} onChange={e => setBulkYear(e.target.value)}>
+                                  <select className="w-20 p-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-black text-slate-600 text-sm" value={bulkYear} onChange={e => setBulkYear(e.target.value)}>
                                       {YEARS.map(y => <option key={y} value={y.toString()}>{y}</option>)}
                                   </select>
                               </div>
                           </div>
-                          <div className="space-y-1.5">
-                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Dia de Vencimento Padrão</label>
-                              <input type="number" min="1" max="28" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-black italic text-indigo-600 focus:ring-2 focus:ring-indigo-500/10" value={bulkDueDay} onChange={e => setBulkDueDay(Number(e.target.value))} />
+                          <div className="space-y-1">
+                              <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Dia de Vencimento Padrão</label>
+                              <input type="number" min="1" max="28" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-black italic text-indigo-600 focus:ring-2 focus:ring-indigo-500/10 text-sm" value={bulkDueDay} onChange={e => setBulkDueDay(Number(e.target.value))} />
                           </div>
                       </div>
-                      <div className="flex gap-3 pt-4">
-                          <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 py-4 text-slate-600 font-bold hover:bg-slate-50 rounded-2xl transition-all border border-slate-100 italic">Voltar</button>
+                      <div className="flex gap-3 pt-2">
+                          <button onClick={() => setIsBulkModalOpen(false)} className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-50 rounded-2xl transition-all border border-slate-100 italic text-xs">Voltar</button>
                           <button 
                             onClick={() => { onGenerateBulk?.(bulkMonth, bulkYear, bulkDueDay); setIsBulkModalOpen(false); }} 
-                            className="flex-2 py-4 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-50 active:scale-95 italic uppercase tracking-widest"
+                            className="flex-2 py-3 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-50 active:scale-95 italic uppercase tracking-widest text-xs"
                           >
                             Disparar Processamento
                           </button>
