@@ -45,7 +45,8 @@ export interface SchoolConfig {
     maxStudents?: number; 
     active?: boolean; 
   }[];
-  monthlyPlans: { id: string; name: string; price: number }[];
+  /* Adicionado dueDay opcional para evitar erros de tipo em componentes de configuração */
+  monthlyPlans: { id: string; name: string; price: number; dueDay?: number }[];
 }
 
 export interface Athlete {
@@ -73,6 +74,7 @@ export interface Transaction {
   status: 'paid' | 'pending' | 'overdue';
   dueDate: string;
   competenceDate: string;
+  description?: string;
   paymentDate?: string;
   reminderSent?: boolean;
 }

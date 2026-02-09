@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
@@ -32,6 +33,8 @@ interface CRMLeadsProps {
   onUpdateLead: (leadId: string, updates: Partial<Lead>) => void;
   onDeleteLead: (leadId: string) => void;
   onEnrollLead: (lead: Lead) => void;
+  /* Fix: Adicionado onNotifyLead à interface para corresponder ao uso em App.tsx */
+  onNotifyLead?: (lead: Lead) => void;
 }
 
 const CRMLeads: React.FC<CRMLeadsProps> = ({ 
@@ -42,7 +45,8 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
   onAddLead, 
   onUpdateLead, 
   onDeleteLead,
-  onEnrollLead 
+  onEnrollLead,
+  onNotifyLead
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | Lead['status']>('all');

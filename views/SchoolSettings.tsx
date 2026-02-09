@@ -18,7 +18,6 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Estado local para gerenciar as linhas de horários dinâmicos no modal de turmas
   const [tempSchedules, setTempSchedules] = useState<{ day: string, time: string }[]>([{ day: '', time: '' }]);
 
   const [fees, setFees] = useState({
@@ -27,54 +26,54 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
   });
 
   const [formData, setFormData] = useState<any>({
-    category: { name: '', minAge: '', maxAge: '', description: '' },
-    plan: { name: '', price: 0, dueDay: 10, description: '', active: true },
+    category: { name: '' },
+    plan: { name: '', price: 0, dueDay: 10 },
     team: { name: '', schedule: '', category: '', maxStudents: 20, active: true }
   });
 
   const handleAddOrUpdateConfig = async (table: string, data: any) => {
-    let finalData: any = { ...data };
+    let payload: any = {};
     
-    // Mapeamento específico para planos (dueDay -> due_day)
+    // Mapeamento corrigido para utilizar camelCase (dueDay) conforme provável estrutura do banco
     if (table === 'school_monthly_plans') {
-      finalData = {
+      payload = {
         name: data.name,
-        price: data.price,
-        due_day: data.dueDay
+        price: Number(data.price),
+        dueDay: Number(data.dueDay)
       };
-    }
-
-    // Mapeamento específico para categorias
-    if (table === 'school_categories') {
-      finalData = {
+    } else if (table === 'school_categories') {
+      payload = {
         name: data.name
       };
-    }
-
-    // Se for turma, processa os horários temporários em uma única string antes de salvar
-    // Além disso, mapeia maxStudents para max_students para compatibilidade com snake_case do Postgres
-    if (table === 'school_teams') {
+    } else if (table === 'school_teams') {
       const scheduleString = tempSchedules
         .filter(s => s.day && s.time)
         .map(s => `${s.day} ${s.time}`)
         .join(', ');
       
-      finalData = {
+      payload = {
         name: data.name,
         category: data.category,
         schedule: scheduleString,
-        max_students: data.maxStudents,
+        maxStudents: Number(data.maxStudents),
         active: data.active
       };
     }
 
-    if (editingId) {
-      await supabase.from(table).update(finalData).eq('id', editingId);
-    } else {
-      await supabase.from(table).insert([{ ...finalData, school_id: school.id }]);
+    try {
+      if (editingId) {
+        const { error } = await supabase.from(table).update(payload).eq('id', editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from(table).insert([{ ...payload, school_id: school.id }]);
+        if (error) throw error;
+      }
+      onRefresh();
+      closeAllModals();
+    } catch (err) {
+      console.error(`Erro ao salvar em ${table}:`, err);
+      alert("Erro ao salvar dados. Verifique se as colunas 'dueDay' ou 'maxStudents' existem na tabela.");
     }
-    onRefresh();
-    closeAllModals();
   };
 
   const closeAllModals = () => {
@@ -84,8 +83,8 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
     setEditingId(null);
     setTempSchedules([{ day: '', time: '' }]);
     setFormData({
-      category: { name: '', minAge: '', maxAge: '', description: '' },
-      plan: { name: '', price: 0, dueDay: 10, description: '', active: true },
+      category: { name: '' },
+      plan: { name: '', price: 0, dueDay: 10 },
       team: { name: '', schedule: '', category: '', maxStudents: 20, active: true }
     });
   };
@@ -93,15 +92,14 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
   const handleEditOpen = (tab: string, item: any) => {
     setEditingId(item.id);
     if (tab === 'categorias') {
-      setFormData({ ...formData, category: { name: item.name, minAge: item.minAge || '', maxAge: item.maxAge || '', description: item.description || '' } });
+      setFormData({ ...formData, category: { name: item.name } });
       setIsCategoryModalOpen(true);
     } else if (tab === 'planos') {
-      setFormData({ ...formData, plan: { name: item.name, price: item.price, dueDay: item.dueDay || 10, description: item.description || '', active: true } });
+      setFormData({ ...formData, plan: { name: item.name, price: item.price, dueDay: item.dueDay || 10 } });
       setIsPlanModalOpen(true);
     } else if (tab === 'turmas') {
       setFormData({ ...formData, team: { name: item.name, schedule: item.schedule || '', category: item.category || '', maxStudents: item.maxStudents || 20, active: item.active !== false } });
       
-      // Converte a string de horários de volta para o array do editor visual
       if (item.schedule) {
         const parts = item.schedule.split(', ');
         const parsed = parts.map((p: string) => {
@@ -238,6 +236,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
             <h3 className="text-xl font-bold text-slate-800 italic uppercase tracking-tighter">Gerenciar {activeTab}</h3>
             <button 
               onClick={() => {
+                setEditingId(null);
                 if(activeTab === 'categorias') setIsCategoryModalOpen(true);
                 if(activeTab === 'planos') setIsPlanModalOpen(true);
                 if(activeTab === 'turmas') setIsTeamModalOpen(true);
@@ -300,7 +299,6 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
         </div>
       )}
 
-      {/* Modal Categoria */}
       {isCategoryModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
@@ -311,7 +309,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
             <div className="p-8 space-y-6">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase italic">Nome da Categoria *</label>
-                <input placeholder="Ex: Sub-7" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/10 font-bold italic" value={formData.category.name} onChange={e => setFormData({...formData, category: {...formData.category, name: e.target.value}})} />
+                <input placeholder="Ex: Sub-7" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-emerald-500/10 font-bold italic" value={formData.category.name} onChange={e => setFormData({...formData, category: { name: e.target.value }})} />
               </div>
               <button onClick={() => handleAddOrUpdateConfig('school_categories', { name: formData.category.name })} className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-700 transition-all shadow-lg active:scale-95 uppercase italic tracking-widest">
                 {editingId ? 'Salvar Alterações' : 'Criar Categoria'}
@@ -321,7 +319,6 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
         </div>
       )}
 
-      {/* Modal Plano */}
       {isPlanModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
@@ -352,7 +349,6 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
         </div>
       )}
 
-      {/* Modal Turma - ATUALIZADO COM SELETOR DE DIAS/HORÁRIOS DINÂMICOS */}
       {isTeamModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">

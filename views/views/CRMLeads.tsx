@@ -31,12 +31,12 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ leads, config, onUpdateStatus, onAd
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
+  // Fix: Replace 'age' with 'birthDate' and remove 'neighborhood' as they are not in Lead interface
   const [formData, setFormData] = useState<Partial<Lead>>({
     name: '',
     parentName: '',
     phone: '',
-    age: '',
-    neighborhood: '',
+    birthDate: '',
     origin: 'Outros',
     categoryInterest: '',
     trialDate: '',
@@ -66,8 +66,9 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ leads, config, onUpdateStatus, onAd
       setFormData(lead);
     } else {
       setEditingLead(null);
+      // Fix: Replace 'age' with 'birthDate' and remove 'neighborhood' as they are not in Lead interface
       setFormData({
-        name: '', parentName: '', phone: '', age: '', neighborhood: '', 
+        name: '', parentName: '', phone: '', birthDate: '', 
         origin: 'Outros', categoryInterest: '', trialDate: '', 
         trialTime: '', status: 'new', notes: ''
       });

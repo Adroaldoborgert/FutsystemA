@@ -13,7 +13,8 @@ import {
   MessageCircle,
   CalendarDays,
   CreditCard,
-  Settings2
+  Settings2,
+  Shield
 } from 'lucide-react';
 import { UserRole } from '../types';
 
@@ -51,22 +52,24 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
     { name: 'Configurações', path: 'settings', icon: Settings, key: 'settings' },
   ];
 
-  // Filtra as abas da escolinha baseada nas flags de visibilidade configuradas pelo Master
   const schoolLinks = role === UserRole.SCHOOL_MANAGER && featureFlags 
     ? allSchoolLinks.filter(link => {
-        if (link.key === 'dashboard') return true; // Dashboard sempre visível
+        if (link.key === 'dashboard') return true;
         return featureFlags[link.key as keyof typeof featureFlags] !== false;
       })
     : allSchoolLinks;
 
   const links = role === UserRole.MASTER ? masterLinks : schoolLinks;
+  const logoUrl = "https://drive.google.com/uc?export=view&id=1Yeb0tiyspiJUn-icr1aDjKZv5hI9HiAc";
 
   return (
-    <aside className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0 z-40">
-      <div className="p-6">
-        <h1 className="text-xl font-bold text-indigo-600 flex items-center gap-2">
-          <div className="bg-indigo-600 text-white p-1 rounded font-black italic">EP</div>
-          <span className="italic uppercase tracking-tighter">EscolinhaPro</span>
+    <aside className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0 z-40 shadow-sm">
+      <div className="p-6 flex items-center gap-3">
+        <div className="w-12 h-12 flex items-center justify-center">
+            <img src={logoUrl} alt="FutSystem Logo" className="w-full h-full object-contain" />
+        </div>
+        <h1 className="text-xl font-black text-brand-purple italic uppercase tracking-tighter">
+          FutSystem
         </h1>
       </div>
 
@@ -80,17 +83,17 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
             <button
               key={link.path}
               onClick={() => onNavigate(link.path)}
-              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold transition-all ${
                 isActive 
-                  ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' 
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                  ? 'bg-brand-purple text-white shadow-xl shadow-brand-purple/20' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-brand-purple'
               }`}
             >
               <div className="flex items-center gap-3">
-                <Icon size={20} className={isWhatsApp && !isActive ? 'text-emerald-500' : ''} />
+                <Icon size={18} className={isWhatsApp && !isActive ? 'text-[#00c67d]' : ''} />
                 {link.name}
               </div>
-              {isWhatsApp && isActive && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+              {isWhatsApp && isActive && <div className="w-1.5 h-1.5 rounded-full bg-[#00c67d] animate-pulse" />}
             </button>
           );
         })}
@@ -99,10 +102,10 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
       <div className="p-4 border-t border-slate-100">
         <button 
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-2xl transition-all"
         >
-          <LogOut size={20} />
-          Sair do Sistema
+          <LogOut size={18} />
+          Sair do FutSystem
         </button>
       </div>
     </aside>

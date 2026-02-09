@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
@@ -19,13 +20,15 @@ import {
   CreditCard,
   History,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Tags
 } from 'lucide-react';
-import { Transaction, Athlete } from '../types';
+import { Transaction, Athlete, School } from '../types';
 
 interface SchoolFinanceProps {
   transactions: Transaction[];
   athletes: Athlete[];
+  school: School;
   whatsappConnected?: boolean;
   onUpdateTransaction: (id: string, updates: Partial<Transaction>) => void;
   onDeleteTransaction: (id: string) => void;
@@ -33,6 +36,8 @@ interface SchoolFinanceProps {
   onGenerateBulk?: (month: string, year: string, dueDay: number) => void;
   onRemoveBulk?: (month: string, year: string) => void;
   onNotifyBulk?: (targets: Transaction[]) => void;
+  /* Fix: Adicionado onNotifyUpcoming à interface para corresponder ao uso em App.tsx */
+  onNotifyUpcoming?: (targets: Transaction[]) => void;
 }
 
 const MONTHS = [
@@ -45,13 +50,15 @@ const YEARS = [2024, 2025, 2026, 2027];
 const SchoolFinance: React.FC<SchoolFinanceProps> = ({ 
   transactions, 
   athletes, 
+  school,
   whatsappConnected = false,
   onUpdateTransaction, 
   onDeleteTransaction,
   onAddTransaction,
   onGenerateBulk,
   onRemoveBulk,
-  onNotifyBulk
+  onNotifyBulk,
+  onNotifyUpcoming
 }) => {
   const [activeTab, setActiveTab] = useState<'list' | 'recurrent'>('list');
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,6 +69,9 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   
+  // Tipo de lançamento selecionado no modal
+  const [launchType, setLaunchType] = useState('Mensalidade');
+
   // Paginação
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -80,20 +90,24 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
     dueDate: new Date().toISOString().split('T')[0],
     competenceDate: `${MONTHS[new Date().getMonth()]}/${new Date().getFullYear()}`,
     status: 'pending',
+    description: 'Mensalidade',
     paymentDate: ''
   });
 
   useEffect(() => {
     if (editingTransaction) {
-      const [m, y] = editingTransaction.competenceDate.split('/');
-      setCompMonth(m);
-      setCompYear(y);
+      const parts = editingTransaction.competenceDate?.split('/') || [];
+      const [m, y] = parts;
+      if (m) setCompMonth(m);
+      if (y) setCompYear(y);
+      setLaunchType(editingTransaction.description || 'Mensalidade');
       setFormData({ ...editingTransaction });
     } else {
       const defaultMonth = MONTHS[new Date().getMonth()];
       const defaultYear = new Date().getFullYear().toString();
       setCompMonth(defaultMonth);
       setCompYear(defaultYear);
+      setLaunchType('Mensalidade');
       setFormData({
         athleteId: '',
         athleteName: '',
@@ -101,17 +115,56 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
         dueDate: new Date().toISOString().split('T')[0],
         competenceDate: `${defaultMonth}/${defaultYear}`,
         status: 'pending',
+        description: 'Mensalidade',
         paymentDate: ''
       });
     }
   }, [editingTransaction, isModalOpen]);
 
+  // Lógica de auto-preenchimento ao mudar o tipo de lançamento
   useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      competenceDate: `${compMonth}/${compYear}`
-    }));
-  }, [compMonth, compYear]);
+    if (!editingTransaction && isModalOpen) {
+      if (launchType === 'Matrícula') {
+        setFormData(prev => ({ 
+          ...prev, 
+          amount: school.enrollmentFee || 0, 
+          description: 'Matrícula',
+          competenceDate: 'Matrícula' 
+        }));
+      } else if (launchType === 'Uniforme') {
+        setFormData(prev => ({ 
+          ...prev, 
+          amount: school.uniformPrice || 0, 
+          description: 'Uniforme',
+          competenceDate: 'Uniforme' 
+        }));
+      } else if (launchType === 'Mensalidade') {
+        // Se voltar para mensalidade, tenta pegar o valor do plano do atleta se ele já estiver selecionado
+        let amount = 0;
+        if (formData.athleteId) {
+          const athlete = athletes.find(a => a.id === formData.athleteId);
+          // O valor viria da config de planos, mas mantemos 0 ou o anterior por segurança
+        }
+        setFormData(prev => ({ 
+          ...prev, 
+          amount: amount || prev.amount, 
+          description: 'Mensalidade',
+          competenceDate: `${compMonth}/${compYear}` 
+        }));
+      } else {
+        setFormData(prev => ({ ...prev, description: 'Outros' }));
+      }
+    }
+  }, [launchType, school.enrollmentFee, school.uniformPrice]);
+
+  useEffect(() => {
+    if (launchType === 'Mensalidade') {
+      setFormData(prev => ({
+        ...prev,
+        competenceDate: `${compMonth}/${compYear}`
+      }));
+    }
+  }, [compMonth, compYear, launchType]);
 
   const processedTransactions = useMemo(() => {
     const today = new Date();
@@ -227,28 +280,28 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Faturamento Total</p>
           <h3 className="text-2xl font-black text-slate-800 italic">R$ {totals.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-sky-50 rounded-2xl flex items-center justify-center text-sky-500">
             <DollarSign size={24} />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Recebido</p>
           <h3 className="text-2xl font-black text-slate-800 italic">R$ {totals.received.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500">
             <CheckCircle2 size={24} />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">A Receber</p>
           <h3 className="text-2xl font-black text-slate-800 italic">R$ {totals.toReceive.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500">
             <Clock size={24} />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
+        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden transition-all hover:shadow-md">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Inadimplência</p>
           <h3 className="text-2xl font-black text-slate-800 italic text-red-600">R$ {totals.overdue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-500">
@@ -314,6 +367,7 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
                         }`}>
                         {trans.status === 'paid' ? 'Pago' : trans.status === 'overdue' ? 'Atrasado' : 'Pendente'}
                         </span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{trans.description || 'Lançamento'}</span>
                     </div>
                     <div className="flex items-center gap-4 text-[11px] text-slate-400 font-medium italic">
                         <span className="flex items-center gap-1"><History size={12}/> Comp: {trans.competenceDate}</span>
@@ -455,7 +509,7 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
                 <h3 className="text-2xl font-black text-slate-800 italic uppercase tracking-tighter">
                   {editingTransaction ? 'Editar Lançamento' : 'Novo Lançamento'}
                 </h3>
-                <p className="text-xs text-slate-500 font-medium italic">Ajuste valores, datas e status da cobrança</p>
+                <p className="text-xs text-slate-500 font-medium italic">Gerencie mensalidades, matrículas e kits</p>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-white rounded-full">
                 <X size={24} />
@@ -463,6 +517,27 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
             </div>
             
             <form onSubmit={handleFormSubmit} className="p-8 space-y-5">
+              {/* Seleção de Tipo de Lançamento */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Tipo de Lançamento</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['Mensalidade', 'Matrícula', 'Uniforme'].map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setLaunchType(type)}
+                      className={`py-2 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                        launchType === type 
+                          ? 'bg-violet-700 text-white border-violet-700 shadow-md' 
+                          : 'bg-white text-slate-400 border-slate-100 hover:bg-slate-50'
+                      }`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Aluno Responsável</label>
                 <div className="relative">
@@ -485,7 +560,7 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Valor da Cobrança (R$)</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Valor (R$)</label>
                   <input required type="number" step="0.01" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none font-black italic text-indigo-600 focus:ring-2 focus:ring-indigo-500/10" value={formData.amount} onChange={e => setFormData({...formData, amount: Number(e.target.value)})} />
                 </div>
                 <div className="space-y-1.5">
@@ -494,24 +569,34 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Mês Competência</label>
-                  <select className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-bold text-slate-600" value={compMonth} onChange={e => setCompMonth(e.target.value)}>
-                      {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
+              {launchType === 'Mensalidade' ? (
+                <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Mês Competência</label>
+                    <select className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-bold text-slate-600" value={compMonth} onChange={e => setCompMonth(e.target.value)}>
+                        {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Ano Competência</label>
+                    <select className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-black text-slate-600" value={compYear} onChange={e => setCompYear(e.target.value)}>
+                        {YEARS.map(y => <option key={y} value={y.toString()}>{y}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Ano Competência</label>
-                  <select className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none italic font-black text-slate-600" value={compYear} onChange={e => setCompYear(e.target.value)}>
-                      {YEARS.map(y => <option key={y} value={y.toString()}>{y}</option>)}
-                  </select>
+              ) : (
+                <div className="space-y-1.5 animate-in slide-in-from-top-2">
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Descrição do Lançamento</label>
+                  <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center gap-3">
+                    <Tags size={18} className="text-indigo-600" />
+                    <span className="text-sm font-bold text-indigo-800 italic">{launchType}</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Status de Pagamento</label>
+                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Status</label>
                   <select 
                     className={`w-full p-4 border rounded-2xl outline-none font-black italic uppercase tracking-tighter focus:ring-2 focus:ring-indigo-500/10 ${
                       formData.status === 'paid' ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 
@@ -541,8 +626,8 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
 
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 text-slate-600 font-bold hover:bg-slate-50 rounded-2xl transition-all shadow-sm border border-slate-100 italic">Cancelar</button>
-                <button type="submit" className="flex-2 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 italic uppercase tracking-widest active:scale-95">
-                  {editingTransaction ? 'Salvar Alterações' : 'Efetivar Lançamento'}
+                <button type="submit" className="flex-2 py-4 bg-violet-700 text-white font-black rounded-2xl hover:bg-violet-800 transition-all shadow-xl shadow-violet-100 italic uppercase tracking-widest active:scale-95">
+                  {editingTransaction ? 'Salvar Alterações' : 'Confirmar Lançamento'}
                 </button>
               </div>
             </form>

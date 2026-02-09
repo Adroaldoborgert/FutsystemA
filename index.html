@@ -4,9 +4,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Futsystem - ERP & CRM EscolinhaPro</title>
+    <title>FutSystem - Gestão Esportiva Inteligente</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                purple: '#7A36BD',
+                deep: '#221113',
+                mid: '#3F1A8D',
+              }
+            }
+          }
+        }
+      }
+    </script>
     <style>
       body { font-family: 'Inter', sans-serif; }
       .glass-effect {
@@ -21,6 +36,9 @@
       .animate-gradient {
         background-size: 200% 200%;
         animation: gradient-bg 5s ease infinite;
+      }
+      .brand-shadow {
+        box-shadow: 0 10px 25px -5px rgba(122, 54, 189, 0.2);
       }
     </style>
   <script type="importmap">

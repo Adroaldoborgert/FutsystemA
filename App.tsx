@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { UserRole, AppState, School, SchoolPlan, Athlete, Lead, PlanDefinition, SchoolConfig, Transaction, WhatsAppInstance } from './types';
 import { PLAN_DEFINITIONS, MOCK_SCHOOLS, MOCK_ATHLETES, MOCK_LEADS } from './constants';
 import { supabase, isSupabaseConfigured } from './services/supabase';
+import { whatsappService } from './services/whatsappService';
 import Sidebar from './components/Sidebar';
 import MasterDashboard from './views/MasterDashboard';
 import MasterUnits from './views/MasterUnits';
@@ -16,7 +17,12 @@ import SchoolSettings from './views/SchoolSettings';
 import SchoolFinance from './views/SchoolFinance';
 import WhatsAppIntegration from './views/WhatsAppIntegration';
 import SchoolPlans from './views/SchoolPlans';
-import { ShieldCheck, Loader2, Mail, Lock, UserPlus, LogIn, Building } from 'lucide-react';
+import { Shield, Loader2, Mail, Lock, UserPlus, LogIn, Building } from 'lucide-react';
+
+const MONTHS = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+];
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
@@ -47,6 +53,8 @@ const App: React.FC = () => {
   const [schoolName, setSchoolName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
+
+  const logoUrl = "https://drive.google.com/uc?export=view&id=1Yeb0tiyspiJUn-icr1aDjKZv5hI9HiAc";
 
   const currentSchool = state.schools.find(s => s.id === (state.impersonatingSchoolId || state.currentUser?.schoolId)) || state.schools[0];
 
@@ -151,7 +159,6 @@ const App: React.FC = () => {
     const activeSchoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
 
     try {
-      // Busca configurações master (ID 1 fixo)
       const { data: masterFlags } = await supabase.from('master_configs').select('feature_flags').eq('id', 1).maybeSingle();
 
       const [schoolsRes, plansRes] = await Promise.all([
@@ -232,7 +239,7 @@ const App: React.FC = () => {
           phone: l.phone || '',
           birthDate: l.age || '',
           trialDate: l.trial_date || '',
-          trialTime: l.trial_time || '',
+          trial_time: l.trial_time || '',
           origin: l.origin || 'Outros',
           categoryInterest: l.category_interest || '',
           status: l.status || 'new',
@@ -246,7 +253,8 @@ const App: React.FC = () => {
           amount: Number(t.amount),
           status: t.status,
           dueDate: t.due_date,
-          competenceDate: t.competence_date,
+          competenceDate: t.competence_date || '',
+          description: t.description || '',
           paymentDate: t.payment_date,
           reminderSent: false
         })),
@@ -264,7 +272,7 @@ const App: React.FC = () => {
             id: mp.id, 
             name: mp.name, 
             price: Number(mp.price),
-            dueDay: mp.due_day || 10
+            dueDay: mp.dueDay || 10
           }))
         }
       }));
@@ -275,157 +283,269 @@ const App: React.FC = () => {
     }
   };
 
-  useEffect(() => { 
-    if (state.currentUser) fetchData(); 
-  }, [state.currentUser?.role, state.currentUser?.schoolId, state.impersonatingSchoolId]);
-
-  const handleUpdateAthlete = async (id: string, updates: Partial<Athlete>) => {
-    await supabase.from('athletes').update({
-      name: updates.name,
-      parent_name: updates.parentName,
-      parent_phone: updates.parentPhone,
-      birth_date: updates.birthDate,
-      category: updates.category,
-      team: updates.team,
-      plan: updates.plan,
-      has_uniform: updates.hasUniform,
-      status: updates.status,
-      payment_status: updates.paymentStatus
-    }).eq('id', id);
-    fetchData();
+  const handleUpdateFeatureFlags = async (flags: any) => {
+    try {
+      const { error } = await supabase.from('master_configs').update({ feature_flags: flags }).eq('id', 1);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao atualizar feature flags:", err);
+    }
   };
 
   const handleAddAthlete = async (athlete: Partial<Athlete>) => {
-    const sid = state.impersonatingSchoolId || state.currentUser?.schoolId;
-    await supabase.from('athletes').insert([{
-      school_id: sid,
-      name: athlete.name,
-      parent_name: athlete.parentName,
-      parent_phone: athlete.parentPhone,
-      birth_date: athlete.birthDate,
-      category: athlete.category,
-      team: athlete.team,
-      plan: athlete.plan,
-      has_uniform: athlete.hasUniform,
-      status: athlete.status,
-      enrollment_date: athlete.enrollmentDate,
-      payment_status: 'pending'
-    }]);
-    fetchData();
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId) return;
+    try {
+      const { error } = await supabase.from('athletes').insert([{
+        school_id: schoolId,
+        name: athlete.name,
+        parent_name: athlete.parentName,
+        parent_phone: athlete.parentPhone,
+        birth_date: athlete.birthDate,
+        category: athlete.category,
+        team: athlete.team,
+        plan: athlete.plan,
+        has_uniform: athlete.hasUniform,
+        status: athlete.status || 'active',
+        enrollment_date: athlete.enrollmentDate || new Date().toISOString().split('T')[0],
+        notes: athlete.notes
+      }]);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao adicionar atleta:", err);
+    }
+  };
+
+  const handleUpdateAthlete = async (id: string, updates: Partial<Athlete>) => {
+    try {
+      const { error } = await supabase.from('athletes').update({
+        name: updates.name,
+        parent_name: updates.parentName,
+        parent_phone: updates.parentPhone,
+        birth_date: updates.birthDate,
+        category: updates.category,
+        team: updates.team,
+        plan: updates.plan,
+        has_uniform: updates.hasUniform,
+        status: updates.status,
+        enrollment_date: updates.enrollmentDate,
+        notes: updates.notes
+      }).eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao atualizar atleta:", err);
+    }
   };
 
   const handleUpdateLeadStatus = async (id: string, status: Lead['status']) => {
-    await supabase.from('leads').update({ status }).eq('id', id);
-    fetchData();
+    try {
+      const { error } = await supabase.from('leads').update({ status }).eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao atualizar status do lead:", err);
+    }
   };
 
   const handleAddLead = async (lead: Partial<Lead>) => {
-    const sid = state.impersonatingSchoolId || state.currentUser?.schoolId;
-    await supabase.from('leads').insert([{
-      school_id: sid,
-      name: lead.name,
-      phone: lead.phone,
-      age: lead.birthDate,
-      trial_date: lead.trialDate,
-      trial_time: lead.trialTime,
-      origin: lead.origin,
-      category_interest: lead.categoryInterest,
-      status: 'new'
-    }]);
-    fetchData();
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId) return;
+    try {
+      const { error } = await supabase.from('leads').insert([{
+        school_id: schoolId,
+        name: lead.name,
+        parent_name: lead.parentName,
+        phone: lead.phone,
+        age: lead.birthDate,
+        trial_date: lead.trialDate,
+        trial_time: lead.trialTime,
+        origin: lead.origin,
+        category_interest: lead.categoryInterest,
+        status: lead.status || 'new',
+        notes: lead.notes
+      }]);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao adicionar lead:", err);
+    }
   };
 
   const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>) => {
-    await supabase.from('transactions').update({
-      status: updates.status,
-      payment_date: updates.paymentDate,
-      amount: updates.amount,
-      due_date: updates.dueDate,
-      competence_date: updates.competenceDate,
-      athlete_name: updates.athleteName
-    }).eq('id', id);
-    fetchData();
+    try {
+      const { error } = await supabase.from('transactions').update({
+        status: updates.status,
+        amount: updates.amount,
+        due_date: updates.dueDate,
+        payment_date: updates.paymentDate === '' ? null : updates.paymentDate,
+        competence_date: updates.competenceDate,
+        description: updates.description
+      }).eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao atualizar transação:", err);
+    }
   };
 
   const handleAddTransaction = async (trans: Partial<Transaction>) => {
-    const sid = state.impersonatingSchoolId || state.currentUser?.schoolId;
-    await supabase.from('transactions').insert([{
-      school_id: sid,
-      athlete_id: trans.athleteId,
-      athlete_name: trans.athleteName,
-      amount: trans.amount,
-      due_date: trans.dueDate,
-      competence_date: trans.competenceDate,
-      status: trans.status || 'pending',
-      payment_date: trans.paymentDate
-    }]);
-    fetchData();
-  };
-
-  const handleUpdateFeatureFlags = async (flags: any) => {
-    setState(prev => ({ ...prev, featureFlags: flags }));
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId) return;
     try {
-      // Upsert garantindo que sempre gravamos no ID 1
-      await supabase.from('master_configs').upsert({ id: 1, feature_flags: flags, updated_at: new Date() });
-    } catch (e) {
-      console.error("Erro ao salvar FeatureFlags:", e);
+      const { error } = await supabase.from('transactions').insert([{
+        school_id: schoolId,
+        athlete_id: trans.athleteId,
+        athlete_name: trans.athleteName,
+        amount: trans.amount,
+        status: trans.status || 'pending',
+        due_date: trans.dueDate,
+        competence_date: trans.competenceDate,
+        description: trans.description,
+        payment_date: trans.paymentDate === '' ? null : trans.paymentDate
+      }]);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao adicionar transação:", err);
     }
   };
 
   const handleGenerateBulk = async (month: string, year: string, dueDay: number) => {
-    const sid = state.impersonatingSchoolId || state.currentUser?.schoolId;
-    if (!sid) return;
-
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId) return;
+    
     const activeAthletes = state.athletes.filter(a => a.status === 'active');
-    const months = [
-      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
-    ];
-    const monthIndex = months.indexOf(month.toLowerCase());
-
+    const competence = `${month}/${year}`;
+    
+    const monthIndex = MONTHS.indexOf(month.toLowerCase());
+    const dueDate = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}-${dueDay.toString().padStart(2, '0')}`;
+    
     const newTransactions = activeAthletes.map(athlete => {
-      const planConfig = state.schoolConfig?.monthlyPlans.find(p => p.name === athlete.plan);
-      const amount = planConfig ? planConfig.price : 0;
-      const dueDate = new Date(parseInt(year), monthIndex, dueDay).toISOString().split('T')[0];
-
-      return {
-        school_id: sid,
-        athlete_id: athlete.id,
-        athlete_name: athlete.name,
-        amount: amount,
-        due_date: dueDate,
-        competence_date: `${month}/${year}`,
-        status: 'pending'
-      };
+        const plan = state.schoolConfig?.monthlyPlans.find(p => p.name === athlete.plan);
+        const amount = plan ? plan.price : 0;
+        
+        return {
+            school_id: schoolId,
+            athlete_id: athlete.id,
+            athlete_name: athlete.name,
+            amount: amount,
+            status: 'pending',
+            due_date: dueDate,
+            competence_date: competence,
+            description: 'Mensalidade'
+        };
     });
 
-    if (newTransactions.length > 0) {
-      await supabase.from('transactions').insert(newTransactions);
-      fetchData();
+    if (newTransactions.length === 0) {
+        alert("Nenhum atleta ativo encontrado para gerar cobranças.");
+        return;
+    }
+
+    try {
+        const { error } = await supabase.from('transactions').insert(newTransactions);
+        if (error) throw error;
+        alert(`${newTransactions.length} mensalidades geradas com sucesso!`);
+        fetchData();
+    } catch (err) {
+        console.error("Erro ao gerar mensalidades em massa:", err);
+        alert("Erro ao gerar mensalidades.");
+    }
+  };
+
+  const handleAutoTrialReminders = async () => {
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId || !state.whatsappInstance || state.whatsappInstance.status !== 'connected') return;
+
+    const { data: config } = await supabase.from('whatsapp_configs').select('notification_rules').eq('school_id', schoolId).single();
+    if (!config?.notification_rules?.trialReminder) return;
+
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    const leadsToNotify = state.leads.filter(l => 
+      l.status === 'trial_scheduled' && 
+      l.trialDate === tomorrowStr && 
+      !l.reminderSent
+    );
+
+    if (leadsToNotify.length > 0) {
+      await handleNotifyWhatsApp('trial', leadsToNotify);
+      for (const lead of leadsToNotify) {
+        await supabase.from('leads').update({ reminder_sent: true }).eq('id', lead.id);
+      }
+      fetchData(); 
+    }
+  };
+
+  useEffect(() => { 
+    if (state.currentUser) {
+      fetchData().then(() => {
+         handleAutoTrialReminders();
+      });
+    }
+  }, [state.currentUser?.role, state.currentUser?.schoolId, state.impersonatingSchoolId, state.whatsappInstance?.status]);
+
+  const handleNotifyWhatsApp = async (type: 'overdue' | 'expiry5days' | 'trial', targets: any[]) => {
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId) return;
+
+    const instanceName = `school_${schoolId}`;
+    const { data: config } = await supabase.from('whatsapp_configs').select('message_templates').eq('school_id', schoolId).single();
+    const template = config?.message_templates?.[type];
+
+    if (!template) {
+      alert("Template de mensagem não configurado na aba WhatsApp.");
+      return;
+    }
+
+    for (const target of targets) {
+      let message = template;
+      if (type === 'trial') {
+        message = message.replace('{lead_name}', target.name).replace('{trial_date}', new Date(target.trialDate).toLocaleDateString('pt-BR')).replace('{trial_time}', target.trial_time || '');
+      } else {
+        const athlete = state.athletes.find(a => a.id === target.athleteId);
+        message = message.replace('{athlete_name}', target.athleteName)
+                         .replace('{parent_name}', athlete?.parentName || 'Responsável')
+                         .replace('{due_date}', new Date(target.dueDate).toLocaleDateString('pt-BR'))
+                         .replace('{amount}', target.amount.toFixed(2))
+                         .replace('{competence}', target.competenceDate);
+      }
+      
+      const phone = type === 'trial' ? target.phone : state.athletes.find(a => a.id === target.athleteId)?.parentPhone;
+      if (phone) {
+        await whatsappService.sendText(instanceName, phone, message);
+      }
+    }
+    if (type !== 'trial' || targets.length > 1) {
+        alert(`Disparos de ${type} concluídos para ${targets.length} contatos.`);
     }
   };
 
   if (currentPath === 'login') {
     return (
-      <div className="fixed inset-0 bg-[#0f172a] z-[100] flex items-center justify-center p-4">
-        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center border border-slate-200">
-          <div className="bg-white p-4 rounded-3xl inline-block shadow-sm border border-slate-100 mb-6">
-            <ShieldCheck size={48} className="text-[#6366f1]" />
+      <div className="fixed inset-0 bg-brand-deep z-[100] flex items-center justify-center p-4">
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center border border-brand-mid/10">
+          <div className="p-2 mb-6 flex justify-center">
+            <img src={logoUrl} alt="FutSystem Logo" className="w-32 h-32 object-contain" />
           </div>
-          <h1 className="text-3xl font-black mb-1 tracking-tighter text-slate-900 italic uppercase">FUTSYSTEM</h1>
-          <p className="text-slate-400 mb-8 font-medium uppercase tracking-widest text-[9px]">Multi-tenant ERP & CRM</p>
+          <h1 className="text-4xl font-black mb-1 tracking-tighter text-brand-purple italic uppercase">FutSystem</h1>
+          <p className="text-slate-400 mb-8 font-bold uppercase tracking-widest text-[10px]">Gestão Esportiva Profissional</p>
           
           <form onSubmit={handleAuthSubmit} className="space-y-4 mb-6 text-left">
             {isSignUp && (
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Nome da Escola</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Nome da Unidade</label>
                 <div className="relative">
                   <Building size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input 
                     type="text" 
-                    placeholder="Ex: Arena Soccer Academy" 
+                    placeholder="Ex: Arena Fut Academy" 
                     required
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium transition-all"
+                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all"
                     value={schoolName}
                     onChange={(e) => setSchoolName(e.target.value)}
                   />
@@ -433,28 +553,28 @@ const App: React.FC = () => {
               </div>
             )}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Seu E-mail</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">E-mail de Acesso</label>
               <div className="relative">
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input 
                   type="email" 
-                  placeholder="email@escola.com" 
+                  placeholder="contato@escola.com" 
                   required
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium transition-all"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Senha de Acesso</label>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Senha</label>
               <div className="relative">
                 <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input 
                   type="password" 
                   placeholder="••••••••" 
                   required
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium transition-all"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -465,18 +585,18 @@ const App: React.FC = () => {
             <button 
               type="submit" 
               disabled={isAuthLoading}
-              className="w-full py-4 bg-[#6366f1] text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all transform active:scale-95 shadow-xl shadow-indigo-100 flex items-center justify-center gap-2"
+              className="w-full py-4 bg-brand-purple text-white font-black rounded-2xl hover:opacity-90 transition-all transform active:scale-95 shadow-xl shadow-brand-purple/10 flex items-center justify-center gap-2 uppercase tracking-widest italic"
             >
               {isAuthLoading ? <Loader2 className="animate-spin" /> : (isSignUp ? <UserPlus size={20} /> : <LogIn size={20} />)}
-              {isSignUp ? 'Criar Minha Escola' : 'Entrar no Sistema'}
+              {isSignUp ? 'Cadastrar Unidade' : 'Acessar FutSystem'}
             </button>
           </form>
 
           <button 
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-indigo-600 text-xs font-bold uppercase tracking-widest hover:underline"
+            className="text-brand-purple text-xs font-black uppercase tracking-widest hover:underline italic"
           >
-            {isSignUp ? 'Já tenho uma conta? Entrar' : 'Não tem conta? Cadastrar Escola'}
+            {isSignUp ? 'Já tenho uma conta? Entrar' : 'Novo por aqui? Cadastre sua escola'}
           </button>
         </div>
       </div>
@@ -497,7 +617,7 @@ const App: React.FC = () => {
       />
       <main className="ml-64 p-8 relative min-h-screen">
         {(isLoading || isAuthLoading) && ( 
-          <div className="fixed top-4 right-8 flex items-center gap-2 text-indigo-600 font-bold bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-xl z-[100] border border-indigo-100"> 
+          <div className="fixed top-4 right-8 flex items-center gap-2 text-brand-purple font-bold bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-xl z-[100] border border-brand-purple/10"> 
             <Loader2 size={18} className="animate-spin" /> {isAuthLoading ? 'Autenticando...' : 'Sincronizando...'} 
           </div> 
         )}
@@ -506,7 +626,7 @@ const App: React.FC = () => {
           {isDataMissing ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Loader2 size={48} className="animate-spin mb-4" />
-              <p className="font-bold uppercase italic tracking-widest text-xs">Carregando dados da unidade...</p>
+              <p className="font-bold uppercase italic tracking-widest text-xs text-brand-purple">Acessando dados FutSystem...</p>
             </div>
           ) : (
             <>
@@ -526,7 +646,7 @@ const App: React.FC = () => {
                 />
               )}
               {currentPath === 'athletes' && currentSchool && <Athletes athletes={state.athletes} config={state.schoolConfig!} school={currentSchool} onAddAthlete={handleAddAthlete} onUpdateAthlete={handleUpdateAthlete} onDeleteAthlete={async (id) => { await supabase.from('athletes').delete().eq('id', id); fetchData(); }} />}
-              {currentPath === 'leads' && <CRMLeads leads={state.leads} config={state.schoolConfig!} onUpdateStatus={handleUpdateLeadStatus} onAddLead={handleAddLead} onUpdateLead={async (id, up) => { 
+              {currentPath === 'leads' && <CRMLeads leads={state.leads} config={state.schoolConfig!} whatsappConnected={!!state.whatsappInstance} onUpdateStatus={handleUpdateLeadStatus} onAddLead={handleAddLead} onUpdateLead={async (id, up) => { 
                 await supabase.from('leads').update({
                   name: up.name,
                   parent_name: up.parentName,
@@ -540,8 +660,21 @@ const App: React.FC = () => {
                   notes: up.notes
                 }).eq('id', id); 
                 fetchData(); 
-              }} onDeleteLead={async (id) => { await supabase.from('leads').delete().eq('id', id); fetchData(); }} onEnrollLead={async (l) => { await supabase.from('leads').update({ status: 'converted' }).eq('id', l.id); handleAddAthlete(l); }} />}
-              {currentPath === 'finance' && <SchoolFinance transactions={state.transactions} athletes={state.athletes} whatsappConnected={!!state.whatsappInstance} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={async (id) => { await supabase.from('transactions').delete().eq('id', id); fetchData(); }} onAddTransaction={handleAddTransaction} onGenerateBulk={handleGenerateBulk} />}
+              }} onDeleteLead={async (id) => { await supabase.from('leads').delete().eq('id', id); fetchData(); }} onEnrollLead={async (l) => { 
+                /* Fix: Mapeamento de Lead para Partial<Athlete> e correção de status incompatível */
+                await supabase.from('leads').update({ status: 'converted' }).eq('id', l.id); 
+                const athleteData: Partial<Athlete> = {
+                  name: l.name,
+                  parentName: l.parentName || '',
+                  parentPhone: l.phone || '',
+                  birthDate: l.birthDate || '',
+                  category: l.categoryInterest,
+                  status: 'active',
+                  enrollmentDate: new Date().toISOString().split('T')[0]
+                };
+                handleAddAthlete(athleteData); 
+              }} onNotifyLead={(lead) => handleNotifyWhatsApp('trial', [lead])} />}
+              {currentPath === 'finance' && <SchoolFinance transactions={state.transactions} athletes={state.athletes} school={currentSchool} whatsappConnected={!!state.whatsappInstance} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={async (id) => { await supabase.from('transactions').delete().eq('id', id); fetchData(); }} onAddTransaction={handleAddTransaction} onGenerateBulk={handleGenerateBulk} onNotifyBulk={(targets) => handleNotifyWhatsApp('overdue', targets)} onNotifyUpcoming={(targets) => handleNotifyWhatsApp('expiry5days', targets)} />}
               {currentPath === 'whatsapp' && currentSchool && <WhatsAppIntegration schoolId={state.currentUser?.schoolId || '1'} school={currentSchool} onStatusChange={(s) => setState(prev => ({...prev, whatsappInstance: s}))} onNavigate={setCurrentPath} />}
               {currentPath === 'school-plans' && currentSchool && <SchoolPlans school={currentSchool} plans={state.plans} onUpgrade={async (p) => { await supabase.from('schools').update({ plan: p }).eq('id', state.currentUser?.schoolId); fetchData(); }} />}
               {currentPath === 'settings' && currentSchool && <SchoolSettings school={currentSchool} config={state.schoolConfig!} onUpdateSettings={async (up) => { 
