@@ -59,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
     : allSchoolLinks;
 
   const links = role === UserRole.MASTER ? masterLinks : schoolLinks;
-  const logoUrl = "https://drive.google.com/uc?export=view&id=1Yeb0tiyspiJUn-icr1aDjKZv5hI9HiAc";
+  const logoUrl = "https://lh3.googleusercontent.com/d/1UT57Wn4oFAqPMfj-8_3tZ5HzXIgr-to2";
 
   return (
     <aside className="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0 z-40 shadow-sm">

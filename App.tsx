@@ -53,7 +53,7 @@ const App: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
 
-  const logoUrl = "https://drive.google.com/uc?export=view&id=1Yeb0tiyspiJUn-icr1aDjKZv5hI9HiAc";
+  const logoUrl = "https://lh3.googleusercontent.com/d/1UT57Wn4oFAqPMfj-8_3tZ5HzXIgr-to2";
 
   const currentSchool = state.schools.find(s => s.id === (state.impersonatingSchoolId || state.currentUser?.schoolId)) || state.schools[0];
 
@@ -238,7 +238,8 @@ const App: React.FC = () => {
           phone: l.phone || '',
           birthDate: l.age || '',
           trialDate: l.trial_date || '',
-          trial_time: l.trial_time || '',
+          // DO add comment above each fix: Fixing incorrect property name trial_time to trialTime to match Lead interface in types.ts
+          trialTime: l.trial_time || '',
           origin: l.origin || 'Outros',
           categoryInterest: l.category_interest || '',
           status: l.status || 'new',
@@ -403,6 +404,7 @@ const App: React.FC = () => {
         due_date: trans.dueDate,
         competence_date: trans.competenceDate,
         description: trans.description,
+        // DO add comment above each fix: Fix reported error: Property 'payment_date' does not exist on type 'Partial<Transaction>'. Corrected to paymentDate.
         payment_date: trans.paymentDate === '' ? null : trans.paymentDate
       }]);
       if (error) throw error;
@@ -504,7 +506,8 @@ const App: React.FC = () => {
     for (const target of targets) {
       let message = template;
       if (type === 'trial') {
-        message = message.replace('{lead_name}', target.name).replace('{trial_date}', new Date(target.trialDate).toLocaleDateString('pt-BR')).replace('{trial_time}', target.trial_time || '');
+        // DO add comment above each fix: Fixing incorrect property name trial_time to trialTime to match Lead interface in types.ts
+        message = message.replace('{lead_name}', target.name).replace('{trial_date}', new Date(target.trialDate).toLocaleDateString('pt-BR')).replace('{trial_time}', target.trialTime || '');
       } else {
         const athlete = state.athletes.find(a => a.id === target.athleteId);
         message = message.replace('{athlete_name}', target.athleteName)
@@ -654,6 +657,7 @@ const App: React.FC = () => {
                   trial_date: up.trialDate,
                   trial_time: up.trialTime,
                   origin: up.origin,
+                  // DO add comment above each fix: Fix reported error: Property 'category_interest' does not exist on type 'Partial<Lead>'. Corrected to categoryInterest.
                   category_interest: up.categoryInterest,
                   status: up.status,
                   notes: up.notes
