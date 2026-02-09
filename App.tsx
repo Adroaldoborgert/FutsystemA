@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { UserRole, AppState, School, SchoolPlan, Athlete, Lead, PlanDefinition, SchoolConfig, Transaction, WhatsAppInstance } from './types';
 import { PLAN_DEFINITIONS, MOCK_SCHOOLS, MOCK_ATHLETES, MOCK_LEADS } from './constants';
@@ -527,73 +528,73 @@ const App: React.FC = () => {
   if (currentPath === 'login') {
     return (
       <div className="fixed inset-0 bg-brand-deep z-[100] flex items-center justify-center p-4">
-        <div className="bg-white p-6 rounded-[10px] shadow-2xl w-full max-w-md text-center border border-brand-mid/10">
-          <div className="p-1 mb-4 flex justify-center">
-            <img src={logoUrl} alt="FutSystem Logo" className="w-24 h-24 object-contain" />
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center border border-brand-mid/10">
+          <div className="p-2 mb-6 flex justify-center">
+            <img src={logoUrl} alt="FutSystem Logo" className="w-32 h-32 object-contain" />
           </div>
-          <h1 className="text-3xl font-black mb-1 tracking-tighter text-brand-purple italic uppercase">FutSystem</h1>
-          <p className="text-slate-400 mb-6 font-bold uppercase tracking-widest text-[9px]">Gestão Esportiva Profissional</p>
+          <h1 className="text-4xl font-black mb-1 tracking-tighter text-brand-purple italic uppercase">FutSystem</h1>
+          <p className="text-slate-400 mb-8 font-bold uppercase tracking-widest text-[10px]">Gestão Esportiva Profissional</p>
           
-          <form onSubmit={handleAuthSubmit} className="space-y-3 mb-4 text-left">
+          <form onSubmit={handleAuthSubmit} className="space-y-4 mb-6 text-left">
             {isSignUp && (
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Nome da Unidade</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Nome da Unidade</label>
                 <div className="relative">
-                  <Building size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Building size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input 
                     type="text" 
                     placeholder="Ex: Arena Fut Academy" 
                     required
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-[10px] outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all text-sm"
+                    className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all"
                     value={schoolName}
                     onChange={(e) => setSchoolName(e.target.value)}
                   />
                 </div>
               </div>
             )}
-            <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">E-mail de Acesso</label>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">E-mail de Acesso</label>
               <div className="relative">
-                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input 
                   type="email" 
                   placeholder="contato@escola.com" 
                   required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-[10px] outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all text-sm"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Senha</label>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Senha</label>
               <div className="relative">
-                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input 
                   type="password" 
                   placeholder="••••••••" 
                   required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-[10px] outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all text-sm"
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
             </div>
-            {error && <p className="text-red-500 text-[9px] font-bold uppercase italic text-center">{error}</p>}
+            {error && <p className="text-red-500 text-[10px] font-bold uppercase italic text-center">{error}</p>}
             
             <button 
               type="submit" 
               disabled={isAuthLoading}
-              className="w-full py-3 bg-brand-purple text-white font-black rounded-[10px] hover:opacity-90 transition-all transform active:scale-95 shadow-xl shadow-brand-purple/10 flex items-center justify-center gap-2 uppercase tracking-widest italic text-xs"
+              className="w-full py-4 bg-brand-purple text-white font-black rounded-2xl hover:opacity-90 transition-all transform active:scale-95 shadow-xl shadow-brand-purple/10 flex items-center justify-center gap-2 uppercase tracking-widest italic"
             >
-              {isAuthLoading ? <Loader2 className="animate-spin" /> : (isSignUp ? <UserPlus size={18} /> : <LogIn size={18} />)}
+              {isAuthLoading ? <Loader2 className="animate-spin" /> : (isSignUp ? <UserPlus size={20} /> : <LogIn size={20} />)}
               {isSignUp ? 'Cadastrar Unidade' : 'Acessar FutSystem'}
             </button>
           </form>
 
           <button 
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-brand-purple text-[10px] font-black uppercase tracking-widest hover:underline italic"
+            className="text-brand-purple text-xs font-black uppercase tracking-widest hover:underline italic"
           >
             {isSignUp ? 'Já tenho uma conta? Entrar' : 'Novo por aqui? Cadastre sua escola'}
           </button>

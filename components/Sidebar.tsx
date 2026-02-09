@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { 
   LayoutDashboard, 
@@ -82,7 +83,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
             <button
               key={link.path}
               onClick={() => onNavigate(link.path)}
-              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[10px] text-sm font-bold transition-all ${
+              className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold transition-all ${
                 isActive 
                   ? 'bg-brand-purple text-white shadow-xl shadow-brand-purple/20' 
                   : 'text-slate-500 hover:bg-slate-50 hover:text-brand-purple'
@@ -101,7 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({ role, currentPath, onNavigate, onLogo
       <div className="p-4 border-t border-slate-100">
         <button 
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-[10px] transition-all"
+          className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-bold text-red-500 hover:bg-red-50 rounded-2xl transition-all"
         >
           <LogOut size={18} />
           Sair do FutSystem
