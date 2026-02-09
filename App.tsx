@@ -9,7 +9,7 @@ import MasterUnits from './views/MasterUnits';
 import MasterPlans from './views/MasterPlans';
 import MasterFinance from './views/MasterFinance';
 import MasterSettings from './views/MasterSettings';
-import SchoolDashboard from './views/SchoolDashboard';
+import SchoolDashboardV2 from './views/SchoolDashboardV2';
 import CRMLeads from './views/CRMLeads';
 import Athletes from './views/Athletes';
 import SchoolSettings from './views/SchoolSettings';
@@ -102,7 +102,6 @@ const App: React.FC = () => {
 
     try {
       if (isSignUp) {
-        // Fluxo de Cadastro de Unidade
         const { data: school, error: schoolErr } = await supabase
           .from('schools')
           .insert([{ 
@@ -130,7 +129,6 @@ const App: React.FC = () => {
         alert("Cadastro realizado! Verifique seu e-mail para confirmar a conta.");
         setIsSignUp(false);
       } else {
-        // Fluxo de Login
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
         if (signInErr) throw signInErr;
       }
@@ -153,13 +151,13 @@ const App: React.FC = () => {
     const activeSchoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
 
     try {
+      // Busca configurações master (ID 1 fixo)
+      const { data: masterFlags } = await supabase.from('master_configs').select('feature_flags').eq('id', 1).maybeSingle();
+
       const [schoolsRes, plansRes] = await Promise.all([
         supabase.from('schools').select('*').order('name'),
         supabase.from('plans').select('*').order('price')
       ]);
-
-      // Busca Feature Flags globais (opcional - persistência local se a tabela não existir)
-      const { data: masterFlags } = await supabase.from('master_configs').select('feature_flags').maybeSingle();
 
       const mappedPlans: PlanDefinition[] = (plansRes.data || []).map(p => ({
         id: p.id as SchoolPlan,
@@ -199,7 +197,6 @@ const App: React.FC = () => {
         featureFlags: masterFlags?.feature_flags || prev.featureFlags,
         plans: mappedPlans.length ? mappedPlans : PLAN_DEFINITIONS,
         schools: (schoolsRes.data || []).map(s => {
-          // Busca o limite de alunos baseado na definição do plano no banco de dados
           const planDef = mappedPlans.find(p => p.id === s.plan || p.name === s.plan);
           return {
             ...s,
@@ -207,7 +204,9 @@ const App: React.FC = () => {
             studentLimit: planDef ? planDef.studentLimit : (s.student_limit || 10),
             studentCount: s.student_count || 0,
             mrr: Number(s.mrr || 0),
-            createdAt: s.created_at
+            createdAt: s.created_at,
+            enrollmentFee: s.enrollment_fee || 0,
+            uniformPrice: s.uniform_price || 0
           };
         }),
         athletes: athletesData.map(a => ({
@@ -253,12 +252,24 @@ const App: React.FC = () => {
         })),
         schoolConfig: {
           categories: categories.map(c => ({ id: c.id, name: c.name })),
-          teams: teams.map(t => ({ id: t.id, name: t.name })),
-          monthlyPlans: monthlyPlans.map(mp => ({ id: mp.id, name: mp.name, price: Number(mp.price) }))
+          teams: teams.map(t => ({ 
+            id: t.id, 
+            name: t.name, 
+            schedule: t.schedule, 
+            category: t.category, 
+            maxStudents: t.max_students, 
+            active: t.active 
+          })),
+          monthlyPlans: monthlyPlans.map(mp => ({ 
+            id: mp.id, 
+            name: mp.name, 
+            price: Number(mp.price),
+            dueDay: mp.due_day || 10
+          }))
         }
       }));
     } catch (err) {
-      console.error(err);
+      console.error("Erro ao sincronizar dados:", err);
     } finally {
       setIsLoading(false);
     }
@@ -353,11 +364,11 @@ const App: React.FC = () => {
 
   const handleUpdateFeatureFlags = async (flags: any) => {
     setState(prev => ({ ...prev, featureFlags: flags }));
-    // Persiste no Supabase se houver tabela para master_configs
     try {
-      await supabase.from('master_configs').upsert({ id: 1, feature_flags: flags });
+      // Upsert garantindo que sempre gravamos no ID 1
+      await supabase.from('master_configs').upsert({ id: 1, feature_flags: flags, updated_at: new Date() });
     } catch (e) {
-      console.warn("Tabela master_configs não encontrada. Configuração aplicada apenas nesta sessão.");
+      console.error("Erro ao salvar FeatureFlags:", e);
     }
   };
 
@@ -472,6 +483,9 @@ const App: React.FC = () => {
     );
   }
 
+  const isSchoolView = !currentPath.startsWith('master-');
+  const isDataMissing = isSchoolView && !currentSchool && state.currentUser?.role === UserRole.SCHOOL_MANAGER;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       <Sidebar 
@@ -482,21 +496,68 @@ const App: React.FC = () => {
         featureFlags={state.featureFlags}
       />
       <main className="ml-64 p-8 relative min-h-screen">
-        {isLoading && ( <div className="fixed top-4 right-8 flex items-center gap-2 text-indigo-600 font-bold bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-xl z-[100] border border-indigo-100"> <Loader2 size={18} className="animate-spin" /> Sincronizando... </div> )}
+        {(isLoading || isAuthLoading) && ( 
+          <div className="fixed top-4 right-8 flex items-center gap-2 text-indigo-600 font-bold bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-xl z-[100] border border-indigo-100"> 
+            <Loader2 size={18} className="animate-spin" /> {isAuthLoading ? 'Autenticando...' : 'Sincronizando...'} 
+          </div> 
+        )}
+        
         <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-          {currentPath === 'master-dashboard' && <MasterDashboard schools={state.schools} />}
-          {currentPath === 'master-units' && ( <MasterUnits schools={state.schools} plans={state.plans} onImpersonate={(id) => { setState(prev => ({ ...prev, impersonatingSchoolId: id })); setCurrentPath('school-dashboard'); }} onUpdatePlan={async (sid, p) => { await supabase.from('schools').update({ plan: p }).eq('id', sid); fetchData(); }} onResetCredentials={() => {}} onAddSchool={async (s) => { await supabase.from('schools').insert([s]); fetchData(); }} /> )}
-          {currentPath === 'master-plans' && ( <MasterPlans plans={state.plans} onUpdatePlanDefinition={async (pid, up) => { await supabase.from('plans').update({ name: up.name, price: up.price, student_limit: up.studentLimit, features: up.features }).eq('id', pid); fetchData(); }} /> )}
-          {currentPath === 'master-finance' && <MasterFinance schools={state.schools} />}
-          {currentPath === 'master-settings' && <MasterSettings featureFlags={state.featureFlags} onUpdateFlags={handleUpdateFeatureFlags} />}
-          
-          {currentPath === 'school-dashboard' && <SchoolDashboard athletes={state.athletes} leads={state.leads} />}
-          {currentPath === 'athletes' && <Athletes athletes={state.athletes} config={state.schoolConfig!} school={currentSchool} onAddAthlete={handleAddAthlete} onUpdateAthlete={handleUpdateAthlete} onDeleteAthlete={async (id) => { await supabase.from('athletes').delete().eq('id', id); fetchData(); }} />}
-          {currentPath === 'leads' && <CRMLeads leads={state.leads} config={state.schoolConfig!} onUpdateStatus={handleUpdateLeadStatus} onAddLead={handleAddLead} onUpdateLead={async (id, up) => { await supabase.from('leads').update(up).eq('id', id); fetchData(); }} onDeleteLead={async (id) => { await supabase.from('leads').delete().eq('id', id); fetchData(); }} onEnrollLead={async (l) => { await supabase.from('leads').update({ status: 'converted' }).eq('id', l.id); handleAddAthlete(l); }} />}
-          {currentPath === 'finance' && <SchoolFinance transactions={state.transactions} athletes={state.athletes} whatsappConnected={!!state.whatsappInstance} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={async (id) => { await supabase.from('transactions').delete().eq('id', id); fetchData(); }} onAddTransaction={handleAddTransaction} onGenerateBulk={handleGenerateBulk} />}
-          {currentPath === 'whatsapp' && <WhatsAppIntegration schoolId={state.currentUser?.schoolId || '1'} school={currentSchool} onStatusChange={(s) => setState(prev => ({...prev, whatsappInstance: s}))} onNavigate={setCurrentPath} />}
-          {currentPath === 'school-plans' && <SchoolPlans school={currentSchool} plans={state.plans} onUpgrade={async (p) => { await supabase.from('schools').update({ plan: p }).eq('id', state.currentUser?.schoolId); fetchData(); }} />}
-          {currentPath === 'settings' && <SchoolSettings school={currentSchool} config={state.schoolConfig!} onUpdateSettings={async (up) => { const sid = state.impersonatingSchoolId || state.currentUser?.schoolId; if(sid) await supabase.from('schools').update(up).eq('id', sid); fetchData(); }} onRefresh={fetchData} />}
+          {isDataMissing ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+              <Loader2 size={48} className="animate-spin mb-4" />
+              <p className="font-bold uppercase italic tracking-widest text-xs">Carregando dados da unidade...</p>
+            </div>
+          ) : (
+            <>
+              {currentPath === 'master-dashboard' && <MasterDashboard schools={state.schools} />}
+              {currentPath === 'master-units' && ( <MasterUnits schools={state.schools} plans={state.plans} onImpersonate={(id) => { setState(prev => ({ ...prev, impersonatingSchoolId: id })); setCurrentPath('school-dashboard'); }} onUpdatePlan={async (sid, p) => { await supabase.from('schools').update({ plan: p }).eq('id', sid); fetchData(); }} onResetCredentials={() => {}} onAddSchool={async (s) => { await supabase.from('schools').insert([s]); fetchData(); }} /> )}
+              {currentPath === 'master-plans' && ( <MasterPlans plans={state.plans} onUpdatePlanDefinition={async (pid, up) => { await supabase.from('plans').update({ name: up.name, price: up.price, student_limit: up.studentLimit, features: up.features }).eq('id', pid); fetchData(); }} /> )}
+              {currentPath === 'master-finance' && <MasterFinance schools={state.schools} />}
+              {currentPath === 'master-settings' && <MasterSettings featureFlags={state.featureFlags} onUpdateFlags={handleUpdateFeatureFlags} />}
+              
+              {currentPath === 'school-dashboard' && currentSchool && (
+                <SchoolDashboardV2 
+                  athletes={state.athletes} 
+                  leads={state.leads} 
+                  transactions={state.transactions}
+                  school={currentSchool} 
+                  onNavigate={setCurrentPath}
+                />
+              )}
+              {currentPath === 'athletes' && currentSchool && <Athletes athletes={state.athletes} config={state.schoolConfig!} school={currentSchool} onAddAthlete={handleAddAthlete} onUpdateAthlete={handleUpdateAthlete} onDeleteAthlete={async (id) => { await supabase.from('athletes').delete().eq('id', id); fetchData(); }} />}
+              {currentPath === 'leads' && <CRMLeads leads={state.leads} config={state.schoolConfig!} onUpdateStatus={handleUpdateLeadStatus} onAddLead={handleAddLead} onUpdateLead={async (id, up) => { 
+                await supabase.from('leads').update({
+                  name: up.name,
+                  parent_name: up.parentName,
+                  phone: up.phone,
+                  age: up.birthDate,
+                  trial_date: up.trialDate,
+                  trial_time: up.trialTime,
+                  origin: up.origin,
+                  category_interest: up.categoryInterest,
+                  status: up.status,
+                  notes: up.notes
+                }).eq('id', id); 
+                fetchData(); 
+              }} onDeleteLead={async (id) => { await supabase.from('leads').delete().eq('id', id); fetchData(); }} onEnrollLead={async (l) => { await supabase.from('leads').update({ status: 'converted' }).eq('id', l.id); handleAddAthlete(l); }} />}
+              {currentPath === 'finance' && <SchoolFinance transactions={state.transactions} athletes={state.athletes} whatsappConnected={!!state.whatsappInstance} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={async (id) => { await supabase.from('transactions').delete().eq('id', id); fetchData(); }} onAddTransaction={handleAddTransaction} onGenerateBulk={handleGenerateBulk} />}
+              {currentPath === 'whatsapp' && currentSchool && <WhatsAppIntegration schoolId={state.currentUser?.schoolId || '1'} school={currentSchool} onStatusChange={(s) => setState(prev => ({...prev, whatsappInstance: s}))} onNavigate={setCurrentPath} />}
+              {currentPath === 'school-plans' && currentSchool && <SchoolPlans school={currentSchool} plans={state.plans} onUpgrade={async (p) => { await supabase.from('schools').update({ plan: p }).eq('id', state.currentUser?.schoolId); fetchData(); }} />}
+              {currentPath === 'settings' && currentSchool && <SchoolSettings school={currentSchool} config={state.schoolConfig!} onUpdateSettings={async (up) => { 
+                const sid = state.impersonatingSchoolId || state.currentUser?.schoolId; 
+                if(sid) {
+                  const dbUpdates: any = {};
+                  if (up.enrollmentFee !== undefined) dbUpdates.enrollment_fee = up.enrollmentFee;
+                  if (up.uniformPrice !== undefined) dbUpdates.uniform_price = up.uniformPrice;
+                  if (Object.keys(dbUpdates).length > 0) {
+                    await supabase.from('schools').update(dbUpdates).eq('id', sid);
+                  }
+                }
+                fetchData(); 
+              }} onRefresh={fetchData} />}
+            </>
+          )}
         </div>
       </main>
     </div>

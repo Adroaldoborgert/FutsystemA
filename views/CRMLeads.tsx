@@ -1,12 +1,10 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
   Plus, 
   Calendar, 
   Clock, 
   CheckCircle2, 
-  MessageCircle, 
   Edit2, 
   Trash2, 
   X, 
@@ -19,7 +17,9 @@ import {
   CalendarCheck,
   Target,
   Baby,
-  Zap
+  Zap,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Lead, SchoolConfig } from '../types';
 
@@ -49,6 +49,10 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const [formData, setFormData] = useState<Partial<Lead>>({
     name: '',
     parentName: '',
@@ -70,11 +74,21 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
     conversionRate: leads.length > 0 ? ((leads.filter(l => l.status === 'converted').length / leads.length) * 100).toFixed(0) : 0
   }), [leads]);
 
-  const filteredLeads = leads.filter(l => {
-    const matchesSearch = l.name.toLowerCase().includes(searchTerm.toLowerCase()) || (l.phone && l.phone.includes(searchTerm));
-    const matchesStatus = statusFilter === 'all' || l.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredLeads = useMemo(() => {
+    return leads.filter(l => {
+      const matchesSearch = l.name.toLowerCase().includes(searchTerm.toLowerCase()) || (l.phone && l.phone.includes(searchTerm));
+      const matchesStatus = statusFilter === 'all' || l.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [leads, searchTerm, statusFilter]);
+
+  // Reset paginação ao mudar filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const totalPages = Math.ceil(filteredLeads.length / itemsPerPage);
+  const paginatedLeads = filteredLeads.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,24 +120,13 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
     setEditingLead(null);
   };
 
-  const handleWhatsApp = (phone: string, name: string) => {
-    const cleanPhone = phone.replace(/\D/g, '');
-    const message = encodeURIComponent(`Olá ${name}, tudo bem? Sou da escolinha e gostaria de confirmar sua aula experimental!`);
-    window.open(`https://wa.me/55${cleanPhone}?text=${message}`, '_blank');
-  };
-
   return (
-    <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500">
+    <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-10">
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-bold text-slate-800 tracking-tight italic uppercase">Aulas Experimentais</h2>
           <div className="flex items-center gap-2 mt-1">
             <p className="text-slate-500 font-medium italic">Gestão de novos interessados</p>
-            {whatsappConnected && (
-              <span className="flex items-center gap-1 text-[10px] font-black text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-tighter">
-                <Zap size={10} fill="currentColor" /> Lembrete 24h Ativo
-              </span>
-            )}
           </div>
         </div>
         <button 
@@ -195,7 +198,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
       </div>
 
       <div className="space-y-4">
-        {filteredLeads.length > 0 ? filteredLeads.map((lead) => (
+        {paginatedLeads.length > 0 ? paginatedLeads.map((lead) => (
           <div key={lead.id} className={`bg-white p-6 rounded-[2rem] shadow-sm border ${lead.status === 'converted' ? 'border-amber-100 bg-amber-50/10' : 'border-slate-50'} flex items-center justify-between hover:border-indigo-100 transition-all group overflow-hidden`}>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-3">
@@ -210,12 +213,6 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
                    lead.status === 'attended' ? 'COMPARECEU' : 
                    lead.status === 'trial_scheduled' ? 'AGENDADO' : 'MATRICULADO'}
                 </span>
-                
-                {lead.status === 'trial_scheduled' && lead.reminderSent && (
-                  <span className="flex items-center gap-1 text-[10px] font-black text-emerald-500 uppercase tracking-tighter bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">
-                    <Zap size={10} fill="currentColor" /> Alerta Enviado
-                  </span>
-                )}
               </div>
               
               <div className="flex items-center gap-6 text-slate-500 font-medium text-sm italic">
@@ -268,13 +265,6 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
                 </button>
               )}
               
-              <button 
-                onClick={() => handleWhatsApp(lead.phone, lead.name)}
-                className="p-3 bg-emerald-50 text-[#25D366] rounded-2xl hover:bg-emerald-100 transition-colors border border-emerald-100"
-              >
-                <MessageCircle size={20} />
-              </button>
-              
               <button onClick={() => handleOpenModal(lead)} className="p-3 bg-white border border-slate-100 text-slate-400 rounded-2xl hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
                 <Edit2 size={20} />
               </button>
@@ -291,6 +281,48 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
           </div>
         )}
       </div>
+
+      {/* Barra de Paginação */}
+      {totalPages > 1 && (
+        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 flex items-center justify-between shadow-sm">
+          <span className="text-xs text-slate-500 font-medium italic">
+            Exibindo {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredLeads.length)} de {filteredLeads.length} leads
+          </span>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-2 text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            
+            <div className="flex items-center gap-1 px-2">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i + 1)}
+                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                    currentPage === i + 1 
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' 
+                    : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-2 text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+            >
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">

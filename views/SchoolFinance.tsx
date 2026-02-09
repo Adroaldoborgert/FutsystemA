@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
@@ -18,7 +17,9 @@ import {
   Zap,
   BellRing,
   CreditCard,
-  History
+  History,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Transaction, Athlete } from '../types';
 
@@ -61,6 +62,10 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const [bulkMonth, setBulkMonth] = useState(MONTHS[new Date().getMonth()]);
   const [bulkYear, setBulkYear] = useState(new Date().getFullYear().toString());
   const [bulkDueDay, setBulkDueDay] = useState(10);
@@ -146,6 +151,14 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
     });
   }, [processedTransactions, searchTerm, statusFilter]);
 
+  // Reset paginação ao mudar filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+  const paginatedTransactions = filteredTransactions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const handleQuickPay = (id: string) => {
     onUpdateTransaction(id, { status: 'paid', paymentDate: new Date().toISOString().split('T')[0] });
   };
@@ -180,7 +193,7 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-500">
+    <div className="space-y-6 max-w-7xl mx-auto animate-in fade-in duration-500 pb-10">
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-bold text-slate-800 tracking-tight italic uppercase">Financeiro</h2>
@@ -290,7 +303,7 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
 
             <div className="bg-white p-8 rounded-[2rem] border border-slate-50 shadow-sm space-y-4">
                 <h4 className="text-xl font-bold text-slate-800 mb-6 italic uppercase tracking-tighter">Histórico Financeiro</h4>
-                {filteredTransactions.length > 0 ? filteredTransactions.map((trans) => (
+                {paginatedTransactions.length > 0 ? paginatedTransactions.map((trans) => (
                 <div key={trans.id} className="flex items-center justify-between p-4 bg-white border-b border-slate-50 hover:bg-slate-50/50 transition-colors group rounded-xl">
                     <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-3">
@@ -338,6 +351,48 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
                    <CreditCard size={48} className="text-slate-100" />
                    Nenhum lançamento encontrado.
                 </div>
+                )}
+
+                {/* Barra de Paginação */}
+                {totalPages > 1 && (
+                  <div className="pt-8 border-t border-slate-50 flex items-center justify-between">
+                    <span className="text-xs text-slate-500 font-medium italic">
+                      Exibindo {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} de {filteredTransactions.length} lançamentos
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="p-2 text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      
+                      <div className="flex items-center gap-1 px-2">
+                        {Array.from({ length: totalPages }).map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setCurrentPage(i + 1)}
+                            className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                              currentPage === i + 1 
+                              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' 
+                              : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800'
+                            }`}
+                          >
+                            {i + 1}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button 
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="p-2 text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                    </div>
+                  </div>
                 )}
             </div>
         </>
@@ -391,6 +446,7 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
           </div>
       )}
 
+      {/* Modais */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -496,7 +552,7 @@ const SchoolFinance: React.FC<SchoolFinanceProps> = ({
 
       {isDeleteConfirmOpen && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/70 backdrop-blur-md p-4">
-              <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 border-4 border-red-100">
+              <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-md overflow-hidden animate-in fade-in zoom-in duration-200 border-4 border-red-100">
                   <div className="p-10 text-center space-y-6">
                       <div className="w-24 h-24 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
                           <Trash2 size={48} />

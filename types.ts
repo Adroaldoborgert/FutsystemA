@@ -37,7 +37,14 @@ export interface School {
 
 export interface SchoolConfig {
   categories: { id: string; name: string }[];
-  teams: { id: string; name: string }[];
+  teams: { 
+    id: string; 
+    name: string; 
+    schedule?: string; 
+    category?: string; 
+    maxStudents?: number; 
+    active?: boolean; 
+  }[];
   monthlyPlans: { id: string; name: string; price: number }[];
 }
 

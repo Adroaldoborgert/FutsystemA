@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, 
   Search, 
@@ -16,7 +15,9 @@ import {
   UserCheck,
   UserMinus,
   Lock,
-  AlertTriangle
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -44,6 +45,10 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
   const [teamFilter, setTeamFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAthlete, setEditingAthlete] = useState<Athlete | null>(null);
+
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Regra SaaS: Apenas atletas ATIVOS contam para o limite do plano
   const activeCount = useMemo(() => athletes.filter(a => a.status === 'active').length, [athletes]);
@@ -95,7 +100,6 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
     if (editingAthlete) {
       onUpdateAthlete(editingAthlete.id, formData);
     } else {
-      // Validação final de segurança antes de enviar para o banco
       if (isLimitReached) {
         alert(`Bloqueio de Plano: Você já atingiu o limite de ${limitValue} alunos ativos. Por favor, faça o upgrade ou desative atletas antigos.`);
         return;
@@ -106,7 +110,6 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
   };
 
   const handleOpenModal = (athlete?: Athlete) => {
-    // Se for um novo cadastro e o limite estiver atingido, impede a abertura do modal
     if (!athlete && isLimitReached) {
         return;
     }
@@ -131,15 +134,25 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
     setEditingAthlete(null);
   };
 
-  const filteredAthletes = athletes.filter(a => {
-    const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase()) || (a.parentPhone && a.parentPhone.includes(searchTerm));
-    const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
-    const matchesTeam = teamFilter === 'all' || a.team === teamFilter;
-    return matchesSearch && matchesStatus && matchesTeam;
-  });
+  const filteredAthletes = useMemo(() => {
+    return athletes.filter(a => {
+      const matchesSearch = a.name.toLowerCase().includes(searchTerm.toLowerCase()) || (a.parentPhone && a.parentPhone.includes(searchTerm));
+      const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
+      const matchesTeam = teamFilter === 'all' || a.team === teamFilter;
+      return matchesSearch && matchesStatus && matchesTeam;
+    });
+  }, [athletes, searchTerm, statusFilter, teamFilter]);
+
+  // Reset paginação ao mudar filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, teamFilter]);
+
+  const totalPages = Math.ceil(filteredAthletes.length / itemsPerPage);
+  const paginatedAthletes = filteredAthletes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500">
+    <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-10">
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-bold text-slate-800 tracking-tight italic uppercase">Gestão de Atletas</h2>
@@ -285,7 +298,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filteredAthletes.length > 0 ? filteredAthletes.map((athlete) => (
+              {paginatedAthletes.length > 0 ? paginatedAthletes.map((athlete) => (
                 <tr key={athlete.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-8 py-5">
                     <div className="font-bold text-slate-800 uppercase italic tracking-tighter text-lg">{athlete.name}</div>
@@ -352,6 +365,48 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
             </tbody>
           </table>
         </div>
+
+        {/* Barra de Paginação */}
+        {totalPages > 1 && (
+          <div className="px-8 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-xs text-slate-500 font-medium italic">
+              Exibindo {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAthletes.length)} de {filteredAthletes.length} atletas
+            </span>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              
+              <div className="flex items-center gap-1 px-2">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                      currentPage === i + 1 
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' 
+                      : 'text-slate-400 hover:bg-white hover:text-slate-800'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2 text-slate-400 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
