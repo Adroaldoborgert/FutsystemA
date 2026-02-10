@@ -278,7 +278,10 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
           >
             {tab.label}
             {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-0 w-full h-[2.5px] bg-slate-900 rounded-none z-10" style={{ borderRadius: '0 !important' }} />
+              <div 
+                className="absolute bottom-0 left-0 w-full h-[2.5px] bg-slate-900 z-10" 
+                style={{ borderRadius: '0px', borderBottomLeftRadius: '0px', borderBottomRightRadius: '0px' }} 
+              />
             )}
           </button>
         ))}
@@ -648,7 +651,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
 
       {isCategoryModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-md overflow-hidden animate-in zoom-in duration-200">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
               <h3 className="font-bold text-slate-800 text-sm">{editingId ? 'Editar Categoria' : 'Nova Categoria'}</h3>
               <button type="button" onClick={closeAllModals} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={20} /></button>
@@ -670,7 +673,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
 
       {isPlanModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-md overflow-hidden animate-in zoom-in duration-200">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
               <h3 className="font-bold text-slate-800 text-sm">{editingId ? 'Editar Plano' : 'Novo Plano'}</h3>
               <button type="button" onClick={closeAllModals} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={20} /></button>
@@ -702,7 +705,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
 
       {isTeamModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-md overflow-hidden animate-in zoom-in duration-200">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
               <h3 className="font-bold text-slate-800 text-sm">{editingId ? 'Editar Turma' : 'Nova Turma'}</h3>
               <button type="button" onClick={closeAllModals} className="text-slate-400 hover:text-slate-600 transition-colors"><X size={20} /></button>

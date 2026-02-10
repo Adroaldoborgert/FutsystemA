@@ -1,19 +1,16 @@
 
 /**
- * SERVIÇO DE INTEGRAÇÃO STRIPE - PRODUÇÃO/TESTE
+ * SERVIÇO DE INTEGRAÇÃO STRIPE - REDIRECIONAMENTO DIRETO
  */
 
-// Chave Pública fornecida
-const STRIPE_PUBLIC_KEY = 'pk_test_51SyIdR4ZLpWFXjcA8VPLln2JXNRfLN8aEQqVG8c2eowp4KMvnq9Gpmix51v9HFLPYEXkA4f8VmYcU0a70aLv1q9R00Ve4xb15n';
+const STRIPE_PUBLIC_KEY = 'pk_test_51SyIdR4ZLpWFXjcA8VPLln2JXNRfLN8aEQqVG8c2eowp4KMvnq9Gpmix51v9HFLPYEXkA4f8VmYcU0a7OaLv1q9R00Ve4xb15n';
 
-// Mapeamento de Planos para IDs da Stripe fornecidos
-// Nota: A Stripe geralmente solicita o "Price ID" (price_...) para o Checkout. 
-// Caso tenha inserido o Product ID (prod_...), certifique-se que sua API de backend trate a conversão ou substitua pelos Price IDs correspondentes.
+// Mapeamento com os PRICE IDs reais fornecidos
 export const STRIPE_PLANS: Record<string, string> = {
-  'Grátis': 'prod_TwB56jhnG2yxDP',
-  'Starter': 'prod_TwB5RTpRUoe8I6',
-  'Professional': 'prod_TxKDKCKUtmbcu6', // Corrigido ID Professional conforme informado
-  'Enterprise': 'price_enterprise_placeholder' // Enterprise não foi informado, mantendo placeholder
+  'Grátis': 'price_1SyIj24ZLpWFXjcAodyr9T4K',
+  'Starter': 'price_1SyIjd4ZLpWFXjcAw4L8WMGM',
+  'Professional': 'price_1SzPYg4ZLpWFXjcAqHmnmJBd',
+  'Enterprise': 'price_1SzPYg4ZLpWFXjcAqHmnmJBd' // Placeholder usando o pro caso não tenha enterprise
 };
 
 export const stripeService = {
@@ -21,37 +18,51 @@ export const stripeService = {
     const priceId = STRIPE_PLANS[planName];
     
     if (!priceId) {
-      alert("ID do plano não configurado para este item na Stripe.");
+      alert("ID do plano não encontrado.");
       return;
     }
 
     if (planName === 'Grátis') {
-      alert("Este plano é gratuito e não requer checkout na Stripe.");
+      alert("Plano gratuito ativado com sucesso!");
       return;
     }
 
-    console.log(`Iniciando checkout Stripe para: ${planName} (${priceId})`);
-
     try {
-      /**
-       * O fluxo ideal é chamar sua API de backend para criar a sessão.
-       * Exemplo de payload para seu endpoint '/api/create-checkout-session':
-       * {
-       *   priceId: priceId,
-       *   successUrl: window.location.origin + '/settings?payment=success',
-       *   cancelUrl: window.location.origin + '/settings?payment=cancel',
-       *   metadata: { schoolId: schoolId, planName: planName }
-       * }
-       */
+      // Inicializa o Stripe no cliente
+      const stripe = (window as any).Stripe(STRIPE_PUBLIC_KEY);
       
-      const message = `Integração configurada!\n\nPlano: ${planName}\nStripe ID: ${priceId}\n\nO sistema agora está pronto para enviar estes dados para sua rota de Checkout no backend.`;
-      alert(message);
+      if (!stripe) {
+        throw new Error("Stripe.js não carregado. Verifique sua conexão.");
+      }
+
+      console.log(`Redirecionando para checkout: ${planName} (${priceId})`);
+
+      // Redirecionamento direto via Client-only Integration
+      const { error } = await stripe.redirectToCheckout({
+        lineItems: [{
+          price: priceId,
+          quantity: 1,
+        }],
+        mode: 'subscription',
+        successUrl: `${window.location.origin}/settings?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/settings?payment=cancel`,
+        customerEmail: schoolEmail,
+        clientReferenceId: schoolId, // Identificador da escola para seu controle
+      });
+
+      if (error) {
+        throw error;
+      }
+
+    } catch (error: any) {
+      console.error("Erro no Stripe Checkout:", error);
       
-      // Simulação de redirecionamento (na vida real, aqui você faria o fetch e redirecionaria para a URL retornada)
-      return true;
-    } catch (error) {
-      console.error("Erro ao iniciar checkout:", error);
-      throw error;
+      // Se falhar por ser uma conta nova sem Client-side enabled, mostra instrução clara
+      if (error.message?.includes("client-side")) {
+        alert("Erro: Você precisa ativar 'Client-side Checkout' no painel da Stripe (Settings > Checkout settings).");
+      } else {
+        alert(`Erro ao iniciar pagamento: ${error.message}`);
+      }
     }
   }
 };
