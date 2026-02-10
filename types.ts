@@ -33,19 +33,32 @@ export interface School {
   password?: string;
   enrollmentFee?: number;
   uniformPrice?: number;
+  hasMultipleUnits?: boolean;
+}
+
+export interface Unit {
+  id: string;
+  name: string;
+  isActive: boolean;
+  address?: string;
+  phone?: string;
+  email?: string;
+  manager?: string;
+  operating_hours?: string;
 }
 
 export interface SchoolConfig {
   categories: { id: string; name: string }[];
+  units: Unit[];
   teams: { 
     id: string; 
     name: string; 
     schedule?: string; 
     category?: string; 
+    unit?: string;
     maxStudents?: number; 
     active?: boolean; 
   }[];
-  /* Adicionado dueDay opcional para evitar erros de tipo em componentes de configuração */
   monthlyPlans: { id: string; name: string; price: number; dueDay?: number }[];
 }
 
@@ -64,6 +77,7 @@ export interface Athlete {
   lastPayment: string;
   enrollmentDate: string;
   notes?: string;
+  unit?: string;
 }
 
 export interface Transaction {
@@ -92,6 +106,7 @@ export interface Lead {
   status: 'new' | 'trial_scheduled' | 'attended' | 'converted';
   notes: string;
   reminderSent?: boolean;
+  unit?: string;
 }
 
 export interface WhatsAppInstance {

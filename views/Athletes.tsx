@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, 
@@ -17,7 +18,8 @@ import {
   Lock,
   AlertTriangle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Check
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -66,7 +68,8 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
     hasUniform: false,
     status: 'active',
     enrollmentDate: new Date().toISOString().split('T')[0],
-    notes: ''
+    notes: '',
+    unit: ''
   });
 
   const stats = useMemo(() => {
@@ -123,7 +126,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
         name: '', parentName: '', parentPhone: '', birthDate: '',
         category: '', team: '', plan: '', hasUniform: false,
         status: 'active', enrollmentDate: new Date().toISOString().split('T')[0],
-        notes: ''
+        notes: '', unit: ''
       });
     }
     setIsModalOpen(true);
@@ -306,6 +309,11 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
                       <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
                         <UserIcon size={12} className="text-slate-300" /> {athlete.parentName}
                       </div>
+                      {athlete.unit && (
+                        <span className="text-[9px] font-black text-slate-400 border border-slate-100 px-2 py-0.5 rounded italic">
+                          {athlete.unit}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-5">
@@ -464,6 +472,26 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
                   </div>
                 </div>
 
+                {school.hasMultipleUnits && (
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Unidade *</label>
+                    <div className="relative">
+                      <select 
+                        required 
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none font-bold italic text-sm" 
+                        value={formData.unit} 
+                        onChange={e => setFormData({...formData, unit: e.target.value})}
+                      >
+                        <option value="">Selecione a unidade</option>
+                        {config.units.filter(u => u.isActive).map(u => (
+                          <option key={u.id} value={u.name}>{u.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Plano Financeiro</label>
                   <div className="relative">
@@ -478,6 +506,37 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Data de Início *</label>
                   <input required type="date" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 text-slate-600 font-bold text-sm" value={formData.enrollmentDate} onChange={e => setFormData({...formData, enrollmentDate: e.target.value})} />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Status do Atleta</label>
+                  <div className="relative">
+                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as 'active' | 'inactive'})}>
+                      <option value="active">Ativo</option>
+                      <option value="inactive">Inativo</option>
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Uniforme Entregue?</label>
+                  <div className="flex items-center gap-3 h-[42px] px-2">
+                    <button 
+                      type="button"
+                      onClick={() => setFormData({...formData, hasUniform: !formData.hasUniform})}
+                      className={`w-11 h-6 flex items-center p-1 cursor-pointer transition-all duration-300 ease-in-out ${
+                        formData.hasUniform ? 'bg-emerald-600' : 'bg-slate-300'
+                      }`}
+                    >
+                      <div 
+                        className={`w-4 h-4 bg-white shadow-sm transition-all duration-300 ease-in-out transform ${
+                          formData.hasUniform ? 'translate-x-5' : 'translate-x-0'
+                        }`} 
+                      />
+                    </button>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest italic">{formData.hasUniform ? 'Sim' : 'Não'}</span>
+                  </div>
                 </div>
               </div>
 

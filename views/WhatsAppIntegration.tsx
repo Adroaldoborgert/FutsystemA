@@ -208,9 +208,15 @@ const WhatsAppIntegration: React.FC<WhatsAppIntegrationProps> = ({ schoolId, sch
     <button 
       onClick={onClick}
       disabled={disabled}
-      className={`w-12 h-6 rounded-full transition-all relative ${disabled ? 'opacity-30 cursor-not-allowed bg-slate-200' : active ? 'bg-[#00c67d]' : 'bg-slate-200'}`}
+      className={`w-11 h-6 flex items-center p-1 cursor-pointer transition-all duration-300 ease-in-out ${
+        disabled ? 'opacity-30 cursor-not-allowed bg-slate-200' : active ? 'bg-emerald-600' : 'bg-slate-300'
+      }`}
     >
-      <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${active ? 'left-7' : 'left-1'}`} />
+      <div 
+        className={`w-4 h-4 bg-white shadow-sm transition-all duration-300 ease-in-out transform ${
+          active ? 'translate-x-5' : 'translate-x-0'
+        }`} 
+      />
     </button>
   );
 
@@ -385,7 +391,7 @@ const WhatsAppIntegration: React.FC<WhatsAppIntegrationProps> = ({ schoolId, sch
                 <span className="text-sm font-bold text-slate-800 italic">Cobrança Atraso</span>
                 <span className="text-[10px] text-slate-400 uppercase tracking-widest">Alerta automático</span>
             </div>
-            <Switch active={rules.cobrancaAtraso} onClick={() => toggleRule('cobrancaAtraso')} />
+            <Switch active={rules.cobracoaAtraso} onClick={() => toggleRule('cobrancaAtraso')} />
           </div>
           <div className="p-4 bg-white border border-slate-100 rounded-2xl flex items-center justify-between">
             <div className="flex flex-col">

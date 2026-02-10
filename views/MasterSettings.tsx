@@ -90,8 +90,12 @@ const MasterSettings: React.FC<MasterSettingsProps> = ({ featureFlags, onUpdateF
                       <EyeOff size={16} /> Oculto
                     </>
                   )}
-                  <div className={`w-8 h-4 rounded-full relative transition-colors ml-2 ${isEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${isEnabled ? 'left-4.5' : 'left-0.5'}`} />
+                  <div className={`w-11 h-6 flex items-center p-1 cursor-pointer transition-all duration-300 ease-in-out ml-2 ${
+                    isEnabled ? 'bg-emerald-600' : 'bg-slate-300'
+                  }`}>
+                    <div className={`w-4 h-4 bg-white shadow-sm transition-all duration-300 ease-in-out transform ${
+                      isEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
                   </div>
                 </button>
               </div>

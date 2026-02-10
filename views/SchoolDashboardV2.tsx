@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { 
   Users, 
@@ -125,31 +126,31 @@ const SchoolDashboardV2: React.FC<SchoolDashboardV2Props> = ({ athletes, leads, 
       </div>
 
       {/* Main Lists Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         <div className="bg-white rounded-[10px] border border-slate-100 shadow-sm flex flex-col min-h-[400px]">
           <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-            <h4 className="font-black text-slate-800 italic uppercase tracking-tighter">Experimentais de Hoje</h4>
-            <button onClick={() => onNavigate?.('leads')} className="text-xs font-black text-brand-purple hover:underline flex items-center gap-1 uppercase tracking-widest">
+            <h4 className="font-black text-slate-800 italic uppercase tracking-tighter text-sm">Experimentais de Hoje</h4>
+            <button onClick={() => onNavigate?.('leads')} className="text-xs font-black text-brand-purple hover:underline flex items-center gap-1 uppercase tracking-widest italic">
               Ver todas <ChevronRight size={14} />
             </button>
           </div>
-          <div className="p-8 flex-1 flex flex-col justify-center">
+          <div className="p-8 flex-1 flex flex-col justify-start">
             {experimentalsToday.length > 0 ? (
               <div className="space-y-4">
                 {experimentalsToday.map(lead => (
-                  <div key={lead.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-[10px] border border-slate-100">
+                  <div key={lead.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-[10px] border border-slate-100 transition-all hover:border-brand-purple/20">
                     <div>
-                      <p className="font-black text-slate-800 italic uppercase text-sm">{lead.name}</p>
+                      <p className="font-black text-slate-800 italic uppercase text-sm tracking-tight">{lead.name}</p>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{lead.categoryInterest} • {lead.trialTime || 'Não definido'}</p>
                     </div>
-                    <button className="text-[10px] font-black text-brand-purple bg-white px-4 py-2 rounded-[10px] shadow-sm border border-slate-100 uppercase tracking-widest italic hover:bg-slate-50 transition-colors">
+                    <button className="text-[10px] font-black text-brand-purple bg-white px-5 py-2.5 rounded-[10px] shadow-sm border border-slate-100 uppercase tracking-widest italic hover:bg-slate-50 transition-colors">
                       Confirmar
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center space-y-4">
+              <div className="text-center py-10 space-y-4">
                 <p className="text-slate-400 text-sm font-bold italic">Nenhum agendamento para hoje</p>
                 <button 
                   onClick={() => onNavigate?.('leads')}
@@ -164,12 +165,12 @@ const SchoolDashboardV2: React.FC<SchoolDashboardV2Props> = ({ athletes, leads, 
 
         <div className="bg-white rounded-[10px] border border-slate-100 shadow-sm flex flex-col min-h-[400px]">
           <div className="p-8 border-b border-slate-50 flex justify-between items-center">
-            <h4 className="font-black text-slate-800 italic uppercase tracking-tighter">Matrículas Recentes</h4>
-            <button onClick={() => onNavigate?.('athletes')} className="text-xs font-black text-slate-400 hover:text-brand-purple hover:underline flex items-center gap-1 uppercase tracking-widest">
+            <h4 className="font-black text-slate-800 italic uppercase tracking-tighter text-sm">Matrículas Recentes</h4>
+            <button onClick={() => onNavigate?.('athletes')} className="text-xs font-black text-slate-400 hover:text-brand-purple hover:underline flex items-center gap-1 uppercase tracking-widest italic">
               Ver todos <ChevronRight size={14} />
             </button>
           </div>
-          <div className="p-8 flex-1 space-y-4">
+          <div className="p-8 flex-1 flex flex-col justify-start space-y-4">
             {recentEnrollments.map(athlete => (
               <div key={athlete.id} className="flex items-center justify-between p-5 bg-white border border-slate-100 rounded-[10px] hover:shadow-md transition-all hover:border-brand-purple/10">
                 <div className="flex items-center gap-4">
@@ -177,7 +178,7 @@ const SchoolDashboardV2: React.FC<SchoolDashboardV2Props> = ({ athletes, leads, 
                     {athlete.name.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-black text-slate-800 italic text-sm uppercase">{athlete.name}</p>
+                    <p className="font-black text-slate-800 italic text-sm uppercase tracking-tight">{athlete.name}</p>
                     <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{athlete.category} • {athlete.team}</p>
                   </div>
                 </div>

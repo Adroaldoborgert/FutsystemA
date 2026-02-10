@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
@@ -19,26 +20,28 @@ import {
   Baby,
   Zap,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
-import { Lead, SchoolConfig } from '../types';
+import { Lead, SchoolConfig, School } from '../types';
 
 interface CRMLeadsProps {
   leads: Lead[];
   config: SchoolConfig;
+  school: School;
   whatsappConnected?: boolean;
   onUpdateStatus: (leadId: string, status: Lead['status']) => void;
   onAddLead: (lead: Partial<Lead>) => void;
   onUpdateLead: (leadId: string, updates: Partial<Lead>) => void;
   onDeleteLead: (leadId: string) => void;
   onEnrollLead: (lead: Lead) => void;
-  /* Fix: Adicionado onNotifyLead à interface para corresponder ao uso em App.tsx */
   onNotifyLead?: (lead: Lead) => void;
 }
 
 const CRMLeads: React.FC<CRMLeadsProps> = ({ 
   leads, 
   config, 
+  school,
   whatsappConnected = false,
   onUpdateStatus, 
   onAddLead, 
@@ -66,7 +69,8 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
     trialDate: '',
     trialTime: '',
     status: 'new',
-    notes: ''
+    notes: '',
+    unit: ''
   });
 
   const stats = useMemo(() => ({
@@ -112,7 +116,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
       setFormData({
         name: '', parentName: '', phone: '', birthDate: '',
         origin: 'Outros', categoryInterest: '', trialDate: '', 
-        trialTime: '', status: 'new', notes: ''
+        trialTime: '', status: 'new', notes: '', unit: ''
       });
     }
     setIsModalOpen(true);
@@ -174,14 +178,14 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
           <input 
             type="text"
             placeholder="Buscar por nome ou WhatsApp..."
-            className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         
         <select 
-          className="bg-slate-50 border-none rounded-2xl px-6 py-3 text-sm font-bold text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500/20 italic"
+          className="bg-slate-50 border-none rounded-2xl px-6 py-3 text-sm font-bold text-slate-600 outline-none focus:ring-2 focus:ring-indigo-500/10 italic"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as any)}
         >
@@ -216,6 +220,11 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
                    lead.status === 'attended' ? 'COMPARECEU' : 
                    lead.status === 'trial_scheduled' ? 'AGENDADO' : 'MATRICULADO'}
                 </span>
+                {lead.unit && (
+                  <span className="text-[9px] font-black text-slate-400 border border-slate-100 px-2 py-0.5 rounded italic">
+                    {lead.unit}
+                  </span>
+                )}
               </div>
               
               <div className="flex items-center gap-6 text-slate-500 font-medium text-sm italic">
@@ -339,7 +348,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Nome do Aluno *</label>
-                  <input required type="text" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all font-bold italic text-sm" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                  <input required type="text" placeholder="Digite o nome completo do aluno" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all font-bold italic text-sm" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">WhatsApp *</label>
@@ -347,7 +356,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Responsável</label>
-                  <input type="text" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all text-sm" value={formData.parentName} onChange={e => setFormData({...formData, parentName: e.target.value})} />
+                  <input type="text" placeholder="Nome do pai, mãe ou tutor" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all text-sm" value={formData.parentName} onChange={e => setFormData({...formData, parentName: e.target.value})} />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Data de Nascimento</label>
@@ -369,6 +378,27 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
                     {config.categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
+
+                {school.hasMultipleUnits && (
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Unidade *</label>
+                    <div className="relative">
+                      <select 
+                        required 
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none font-bold italic text-sm" 
+                        value={formData.unit} 
+                        onChange={e => setFormData({...formData, unit: e.target.value})}
+                      >
+                        <option value="">Selecione a unidade</option>
+                        {config.units.filter(u => u.isActive).map(u => (
+                          <option key={u.id} value={u.name}>{u.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Status Inicial</label>
                   <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none italic text-sm" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})}>
@@ -388,7 +418,6 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({
                 </div>
               </div>
               <div className="pt-2 flex gap-3">
-                {/* DO add comment above each fix: Fix for line 391, changing undefined closeAllModals to closeModal */}
                 <button type="button" onClick={closeModal} className="flex-1 py-3 text-slate-600 font-bold hover:bg-slate-50 rounded-2xl transition-all shadow-sm border text-xs">Cancelar</button>
                 <button type="submit" className="flex-1 py-3 bg-[#8b31ff] text-white font-bold rounded-2xl hover:bg-[#7a28e0] transition-all shadow-lg shadow-purple-50 italic text-xs">
                   {editingLead ? 'Atualizar Lead' : 'Salvar Lead'}

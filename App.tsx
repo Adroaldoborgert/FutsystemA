@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { UserRole, AppState, School, SchoolPlan, Athlete, Lead, PlanDefinition, SchoolConfig, Transaction, WhatsAppInstance } from './types';
 import { PLAN_DEFINITIONS, MOCK_SCHOOLS, MOCK_ATHLETES, MOCK_LEADS } from './constants';
@@ -16,7 +17,7 @@ import SchoolSettings from './views/SchoolSettings';
 import SchoolFinance from './views/SchoolFinance';
 import WhatsAppIntegration from './views/WhatsAppIntegration';
 import SchoolPlans from './views/SchoolPlans';
-import { Shield, Loader2, Mail, Lock, UserPlus, LogIn, Building } from 'lucide-react';
+import { Shield, Loader2, Mail, Lock, UserPlus, LogIn, Building, ArrowRight } from 'lucide-react';
 
 const MONTHS = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
@@ -32,7 +33,7 @@ const App: React.FC = () => {
     transactions: [],
     plans: [],
     impersonatingSchoolId: null,
-    schoolConfig: { categories: [], teams: [], monthlyPlans: [] },
+    schoolConfig: { categories: [], teams: [], monthlyPlans: [], units: [] },
     whatsappInstance: null,
     featureFlags: {
       athletes: true,
@@ -179,15 +180,17 @@ const App: React.FC = () => {
       let categories = [];
       let teams = [];
       let monthlyPlans = [];
+      let units = [];
 
       if (activeSchoolId) {
-        const [athRes, leadRes, transRes, catRes, teamRes, mPlanRes] = await Promise.all([
+        const [athRes, leadRes, transRes, catRes, teamRes, mPlanRes, unitRes] = await Promise.all([
           supabase.from('athletes').select('*').eq('school_id', activeSchoolId).order('name'),
           supabase.from('leads').select('*').eq('school_id', activeSchoolId).order('created_at', { ascending: false }),
           supabase.from('transactions').select('*').eq('school_id', activeSchoolId).order('due_date', { ascending: true }),
           supabase.from('school_categories').select('*').eq('school_id', activeSchoolId).order('name'),
           supabase.from('school_teams').select('*').eq('school_id', activeSchoolId).order('name'),
-          supabase.from('school_monthly_plans').select('*').eq('school_id', activeSchoolId).order('name')
+          supabase.from('school_monthly_plans').select('*').eq('school_id', activeSchoolId).order('name'),
+          supabase.from('school_units').select('*').eq('school_id', activeSchoolId).order('name')
         ]);
 
         athletesData = athRes.data || [];
@@ -196,6 +199,7 @@ const App: React.FC = () => {
         categories = catRes.data || [];
         teams = teamRes.data || [];
         monthlyPlans = mPlanRes.data || [];
+        units = unitRes.data || [];
       }
 
       setState(prev => ({
@@ -212,7 +216,8 @@ const App: React.FC = () => {
             mrr: Number(s.mrr || 0),
             createdAt: s.created_at,
             enrollmentFee: s.enrollment_fee || 0,
-            uniformPrice: s.uniform_price || 0
+            uniformPrice: s.uniform_price || 0,
+            hasMultipleUnits: s.is_multi_unit || false
           };
         }),
         athletes: athletesData.map(a => ({
@@ -229,7 +234,8 @@ const App: React.FC = () => {
           paymentStatus: a.payment_status || 'pending',
           lastPayment: a.last_payment || '',
           enrollmentDate: a.enrollment_date,
-          notes: a.notes || ''
+          notes: a.notes || '',
+          unit: a.unit || ''
         })),
         leads: (leadsData || []).map(l => ({
           id: l.id,
@@ -238,13 +244,13 @@ const App: React.FC = () => {
           phone: l.phone || '',
           birthDate: l.age || '',
           trialDate: l.trial_date || '',
-          // DO add comment above each fix: Fixing incorrect property name trial_time to trialTime to match Lead interface in types.ts
           trialTime: l.trial_time || '',
           origin: l.origin || 'Outros',
           categoryInterest: l.category_interest || '',
           status: l.status || 'new',
           notes: l.notes || '',
-          reminderSent: l.reminder_sent || false
+          reminderSent: l.reminder_sent || false,
+          unit: l.unit || ''
         })),
         transactions: (transactionsData || []).map(t => ({
           id: t.id,
@@ -260,11 +266,13 @@ const App: React.FC = () => {
         })),
         schoolConfig: {
           categories: categories.map(c => ({ id: c.id, name: c.name })),
+          units: units.map(u => ({ id: u.id, name: u.name, isActive: u.is_active !== false })),
           teams: teams.map(t => ({ 
             id: t.id, 
             name: t.name, 
             schedule: t.schedule, 
             category: t.category, 
+            unit: t.unit,
             maxStudents: t.max_students, 
             active: t.active 
           })),
@@ -302,14 +310,15 @@ const App: React.FC = () => {
         name: athlete.name,
         parent_name: athlete.parentName,
         parent_phone: athlete.parentPhone,
-        birth_date: athlete.birthDate,
+        birth_date: athlete.birthDate || null,
         category: athlete.category,
         team: athlete.team,
         plan: athlete.plan,
         has_uniform: athlete.hasUniform,
         status: athlete.status || 'active',
         enrollment_date: athlete.enrollmentDate || new Date().toISOString().split('T')[0],
-        notes: athlete.notes
+        notes: athlete.notes,
+        unit: athlete.unit
       }]);
       if (error) throw error;
       fetchData();
@@ -324,14 +333,15 @@ const App: React.FC = () => {
         name: updates.name,
         parent_name: updates.parentName,
         parent_phone: updates.parentPhone,
-        birth_date: updates.birthDate,
+        birth_date: updates.birthDate || null,
         category: updates.category,
         team: updates.team,
         plan: updates.plan,
         has_uniform: updates.hasUniform,
         status: updates.status,
         enrollment_date: updates.enrollmentDate,
-        notes: updates.notes
+        notes: updates.notes,
+        unit: updates.unit
       }).eq('id', id);
       if (error) throw error;
       fetchData();
@@ -354,18 +364,20 @@ const App: React.FC = () => {
     const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
     if (!schoolId) return;
     try {
+      // Fix: Used correct property names trialDate, trialTime, and categoryInterest
       const { error } = await supabase.from('leads').insert([{
         school_id: schoolId,
         name: lead.name,
         parent_name: lead.parentName,
         phone: lead.phone,
-        age: lead.birthDate,
-        trial_date: lead.trialDate,
-        trial_time: lead.trialTime,
+        age: lead.birthDate === '' ? null : lead.birthDate,
+        trial_date: lead.trialDate === '' ? null : lead.trialDate,
+        trial_time: lead.trialTime === '' ? null : lead.trialTime,
         origin: lead.origin,
         category_interest: lead.categoryInterest,
         status: lead.status || 'new',
-        notes: lead.notes
+        notes: lead.notes,
+        unit: lead.unit
       }]);
       if (error) throw error;
       fetchData();
@@ -376,6 +388,7 @@ const App: React.FC = () => {
 
   const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>) => {
     try {
+      // Fix: Used correct property name competenceDate
       const { error } = await supabase.from('transactions').update({
         status: updates.status,
         amount: updates.amount,
@@ -395,6 +408,7 @@ const App: React.FC = () => {
     const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
     if (!schoolId) return;
     try {
+      // Fix: Used correct property name paymentDate
       const { error } = await supabase.from('transactions').insert([{
         school_id: schoolId,
         athlete_id: trans.athleteId,
@@ -404,7 +418,6 @@ const App: React.FC = () => {
         due_date: trans.dueDate,
         competence_date: trans.competenceDate,
         description: trans.description,
-        // DO add comment above each fix: Fix reported error: Property 'payment_date' does not exist on type 'Partial<Transaction>'. Corrected to paymentDate.
         payment_date: trans.paymentDate === '' ? null : trans.paymentDate
       }]);
       if (error) throw error;
@@ -469,7 +482,7 @@ const App: React.FC = () => {
 
     const leadsToNotify = state.leads.filter(l => 
       l.status === 'trial_scheduled' && 
-      l.trialDate === tomorrowStr && 
+      l.trial_date === tomorrowStr && 
       !l.reminderSent
     );
 
@@ -506,8 +519,7 @@ const App: React.FC = () => {
     for (const target of targets) {
       let message = template;
       if (type === 'trial') {
-        // DO add comment above each fix: Fixing incorrect property name trial_time to trialTime to match Lead interface in types.ts
-        message = message.replace('{lead_name}', target.name).replace('{trial_date}', new Date(target.trialDate).toLocaleDateString('pt-BR')).replace('{trial_time}', target.trialTime || '');
+        message = message.replace('{lead_name}', target.name).replace('{trial_date}', new Date(target.trial_date).toLocaleDateString('pt-BR')).replace('{trial_time}', target.trial_time || '');
       } else {
         const athlete = state.athletes.find(a => a.id === target.athleteId);
         message = message.replace('{athlete_name}', target.athleteName)
@@ -530,73 +542,74 @@ const App: React.FC = () => {
   if (currentPath === 'login') {
     return (
       <div className="fixed inset-0 bg-brand-deep z-[100] flex items-center justify-center p-4">
-        <div className="bg-white p-6 rounded-[2.5rem] shadow-2xl w-full max-w-md text-center border border-brand-mid/10">
-          <div className="p-1 mb-4 flex justify-center">
-            <img src={logoUrl} alt="FutSystem Logo" className="w-24 h-24 object-contain" />
+        <div className="bg-white p-10 rounded-[10px] shadow-2xl w-full max-w-[440px] text-center border border-slate-100 flex flex-col items-center">
+          <div className="mb-8 flex justify-center">
+            <img src={logoUrl} alt="FutSystem Logo" className="w-20 h-20 object-contain" />
           </div>
-          <h1 className="text-3xl font-black mb-1 tracking-tighter text-brand-purple italic uppercase">FutSystem</h1>
-          <p className="text-slate-400 mb-6 font-bold uppercase tracking-widest text-[9px]">Gestão Esportiva Profissional</p>
           
-          <form onSubmit={handleAuthSubmit} className="space-y-3 mb-4 text-left">
+          <h1 className="text-[2.2rem] font-black leading-tight text-brand-purple italic uppercase tracking-tighter mb-1">FUTSYSTEM</h1>
+          <p className="text-slate-400 mb-10 font-black uppercase tracking-widest text-[10px]">Gestão Esportiva Profissional</p>
+          
+          <form onSubmit={handleAuthSubmit} className="space-y-5 w-full text-left">
             {isSignUp && (
-              <div className="space-y-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Nome da Unidade</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Unidade</label>
                 <div className="relative">
-                  <Building size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Building size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input 
                     type="text" 
                     placeholder="Ex: Arena Fut Academy" 
                     required
-                    className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all text-sm"
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold transition-all text-sm"
                     value={schoolName}
                     onChange={(e) => setSchoolName(e.target.value)}
                   />
                 </div>
               </div>
             )}
-            <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">E-mail de Acesso</label>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Acesso</label>
               <div className="relative">
-                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input 
                   type="email" 
-                  placeholder="contato@escola.com" 
+                  placeholder="admin@futsystem.com" 
                   required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all text-sm"
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold transition-all text-sm"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-2">Senha</label>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
               <div className="relative">
-                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input 
                   type="password" 
                   placeholder="••••••••" 
                   required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-brand-purple/20 font-medium transition-all text-sm"
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold transition-all text-sm"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
             </div>
-            {error && <p className="text-red-500 text-[9px] font-bold uppercase italic text-center">{error}</p>}
+            {error && <p className="text-red-500 text-[10px] font-bold uppercase italic text-center py-1">{error}</p>}
             
             <button 
               type="submit" 
               disabled={isAuthLoading}
-              className="w-full py-3 bg-brand-purple text-white font-black rounded-2xl hover:opacity-90 transition-all transform active:scale-95 shadow-xl shadow-brand-purple/10 flex items-center justify-center gap-2 uppercase tracking-widest italic text-xs"
+              className="w-full py-4 bg-brand-purple text-white font-black rounded-2xl hover:opacity-90 transition-all transform active:scale-95 shadow-xl shadow-brand-purple/10 flex items-center justify-center gap-3 uppercase tracking-widest italic text-xs mt-4"
             >
-              {isAuthLoading ? <Loader2 className="animate-spin" /> : (isSignUp ? <UserPlus size={18} /> : <LogIn size={18} />)}
+              {isAuthLoading ? <Loader2 className="animate-spin" /> : (isSignUp ? <UserPlus size={18} /> : <ArrowRight size={18} />)}
               {isSignUp ? 'Cadastrar Unidade' : 'Acessar FutSystem'}
             </button>
           </form>
 
           <button 
             onClick={() => setIsSignUp(!isSignUp)}
-            className="text-brand-purple text-[10px] font-black uppercase tracking-widest hover:underline italic"
+            className="mt-10 text-brand-purple text-[10px] font-black uppercase tracking-widest hover:underline italic"
           >
             {isSignUp ? 'Já tenho uma conta? Entrar' : 'Novo por aqui? Cadastre sua escola'}
           </button>
@@ -648,23 +661,22 @@ const App: React.FC = () => {
                 />
               )}
               {currentPath === 'athletes' && currentSchool && <Athletes athletes={state.athletes} config={state.schoolConfig!} school={currentSchool} onAddAthlete={handleAddAthlete} onUpdateAthlete={handleUpdateAthlete} onDeleteAthlete={async (id) => { await supabase.from('athletes').delete().eq('id', id); fetchData(); }} />}
-              {currentPath === 'leads' && <CRMLeads leads={state.leads} config={state.schoolConfig!} whatsappConnected={!!state.whatsappInstance} onUpdateStatus={handleUpdateLeadStatus} onAddLead={handleAddLead} onUpdateLead={async (id, up) => { 
+              {currentPath === 'leads' && <CRMLeads leads={state.leads} config={state.schoolConfig!} school={currentSchool} whatsappConnected={!!state.whatsappInstance} onUpdateStatus={handleUpdateLeadStatus} onAddLead={handleAddLead} onUpdateLead={async (id, up) => { 
                 await supabase.from('leads').update({
                   name: up.name,
                   parent_name: up.parentName,
                   phone: up.phone,
-                  age: up.birthDate,
-                  trial_date: up.trialDate,
-                  trial_time: up.trialTime,
+                  age: up.birthDate === '' ? null : up.birthDate,
+                  trial_date: up.trialDate === '' ? null : up.trialDate,
+                  trial_time: up.trialTime === '' ? null : up.trialTime,
                   origin: up.origin,
-                  // DO add comment above each fix: Fix reported error: Property 'category_interest' does not exist on type 'Partial<Lead>'. Corrected to categoryInterest.
                   category_interest: up.categoryInterest,
                   status: up.status,
-                  notes: up.notes
+                  notes: up.notes,
+                  unit: up.unit
                 }).eq('id', id); 
                 fetchData(); 
               }} onDeleteLead={async (id) => { await supabase.from('leads').delete().eq('id', id); fetchData(); }} onEnrollLead={async (l) => { 
-                /* Fix: Mapeamento de Lead para Partial<Athlete> e correção de status incompatível */
                 await supabase.from('leads').update({ status: 'converted' }).eq('id', l.id); 
                 const athleteData: Partial<Athlete> = {
                   name: l.name,
@@ -673,7 +685,8 @@ const App: React.FC = () => {
                   birthDate: l.birthDate || '',
                   category: l.categoryInterest,
                   status: 'active',
-                  enrollmentDate: new Date().toISOString().split('T')[0]
+                  enrollmentDate: new Date().toISOString().split('T')[0],
+                  unit: l.unit
                 };
                 handleAddAthlete(athleteData); 
               }} onNotifyLead={(lead) => handleNotifyWhatsApp('trial', [lead])} />}
@@ -686,6 +699,7 @@ const App: React.FC = () => {
                   const dbUpdates: any = {};
                   if (up.enrollmentFee !== undefined) dbUpdates.enrollment_fee = up.enrollmentFee;
                   if (up.uniformPrice !== undefined) dbUpdates.uniform_price = up.uniformPrice;
+                  if (up.hasMultipleUnits !== undefined) dbUpdates.is_multi_unit = up.hasMultipleUnits;
                   if (Object.keys(dbUpdates).length > 0) {
                     await supabase.from('schools').update(dbUpdates).eq('id', sid);
                   }
