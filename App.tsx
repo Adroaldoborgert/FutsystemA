@@ -217,7 +217,8 @@ const App: React.FC = () => {
             createdAt: s.created_at,
             enrollmentFee: s.enrollment_fee || 0,
             uniformPrice: s.uniform_price || 0,
-            hasMultipleUnits: s.is_multi_unit || false
+            hasMultipleUnits: s.is_multi_unit || false,
+            managerName: s.manager_name || ''
           };
         }),
         athletes: athletesData.map(a => ({
@@ -364,7 +365,6 @@ const App: React.FC = () => {
     const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
     if (!schoolId) return;
     try {
-      // Fix: Used correct property names trialDate, trialTime, and categoryInterest
       const { error } = await supabase.from('leads').insert([{
         school_id: schoolId,
         name: lead.name,
@@ -388,7 +388,6 @@ const App: React.FC = () => {
 
   const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>) => {
     try {
-      // Fix: Used correct property name competenceDate
       const { error } = await supabase.from('transactions').update({
         status: updates.status,
         amount: updates.amount,
@@ -408,7 +407,6 @@ const App: React.FC = () => {
     const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
     if (!schoolId) return;
     try {
-      // Fix: Used correct property name paymentDate
       const { error } = await supabase.from('transactions').insert([{
         school_id: schoolId,
         athlete_id: trans.athleteId,
@@ -697,6 +695,9 @@ const App: React.FC = () => {
                 const sid = state.impersonatingSchoolId || state.currentUser?.schoolId; 
                 if(sid) {
                   const dbUpdates: any = {};
+                  if (up.name !== undefined) dbUpdates.name = up.name;
+                  if (up.managerName !== undefined) dbUpdates.manager_name = up.managerName;
+                  if (up.email !== undefined) dbUpdates.email = up.email;
                   if (up.enrollmentFee !== undefined) dbUpdates.enrollment_fee = up.enrollmentFee;
                   if (up.uniformPrice !== undefined) dbUpdates.uniform_price = up.uniformPrice;
                   if (up.hasMultipleUnits !== undefined) dbUpdates.is_multi_unit = up.hasMultipleUnits;
