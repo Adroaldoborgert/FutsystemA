@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, Plus, Trash2, Edit, DollarSign, Users, Layout, GraduationCap, X, ChevronDown, Building2, Shirt, Clock, MapPin, CheckCircle2 } from 'lucide-react';
+import { Settings, Save, Plus, Trash2, Edit, DollarSign, Users, Layout, GraduationCap, X, ChevronDown, Building2, Shirt, Clock, MapPin, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { School, SchoolConfig } from '../types';
 import { supabase } from '../services/supabase';
 
@@ -17,18 +17,18 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{table: string, id: string} | null>(null);
 
   const [tempSchedules, setTempSchedules] = useState<{ day: string, time: string }[]>([{ day: '', time: '' }]);
 
-  // Estado local para os campos da aba "Escola"
   const [fees, setFees] = useState({
     enrollmentFee: school.enrollmentFee || 0,
     uniformPrice: school.uniformPrice || 0,
     hasMultipleUnits: school.hasMultipleUnits || false
   });
 
-  // Sincroniza o estado local sempre que a escola (vinda do banco) mudar
   useEffect(() => {
     setFees({
       enrollmentFee: school.enrollmentFee || 0,
@@ -95,7 +95,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
       closeAllModals();
     } catch (err) {
       console.error(`Erro ao salvar em ${table}:`, err);
-      alert("Erro ao salvar dados. Verifique sua conexão ou permissões.");
+      alert("Erro ao salvar dados.");
     }
   };
 
@@ -104,7 +104,9 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
     setIsPlanModalOpen(false);
     setIsTeamModalOpen(false);
     setIsUnitModalOpen(false);
+    setIsDeleteConfirmOpen(false);
     setEditingId(null);
+    setPendingDelete(null);
     setTempSchedules([{ day: '', time: '' }]);
     setFormData({
       category: { name: '' },
@@ -154,16 +156,22 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
     }
   };
 
-  const handleRemoveConfig = async (table: string, id: string) => {
-    if (window.confirm('Deseja realmente excluir este item permanentemente? Esta ação não pode ser desfeita.')) {
-      try {
-        const { error } = await supabase.from(table).delete().eq('id', id);
-        if (error) throw error;
-        onRefresh();
-      } catch (err) {
-        console.error(`Erro ao excluir de ${table}:`, err);
-        alert("Erro ao excluir item. Verifique sua conexão.");
-      }
+  const handleRemoveConfig = (table: string, id: string) => {
+    setPendingDelete({ table, id });
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmRemoval = async () => {
+    if (!pendingDelete) return;
+    try {
+      const { error } = await supabase.from(pendingDelete.table).delete().eq('id', pendingDelete.id);
+      if (error) throw error;
+      onRefresh();
+    } catch (err) {
+      console.error(`Erro ao excluir:`, err);
+      alert("Erro ao excluir item.");
+    } finally {
+      closeAllModals();
     }
   };
 
@@ -393,6 +401,39 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmação de Exclusão */}
+      {isDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[10px] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200 border border-slate-100">
+            <div className="p-8 text-center space-y-6">
+              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto">
+                <AlertTriangle size={32} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="font-black text-slate-800 uppercase italic tracking-tighter text-lg">Confirmar Exclusão?</h3>
+                <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                  Deseja realmente excluir este item permanentemente? Esta ação não pode ser desfeita.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={closeAllModals}
+                  className="flex-1 py-3 bg-slate-50 text-slate-600 font-bold rounded-[10px] hover:bg-slate-100 transition-all text-xs uppercase tracking-widest italic"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={confirmRemoval}
+                  className="flex-1 py-3 bg-red-600 text-white font-black rounded-[10px] hover:bg-red-700 transition-all shadow-lg shadow-red-100 text-xs uppercase tracking-widest italic"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
