@@ -210,6 +210,7 @@ const App: React.FC = () => {
           const planDef = mappedPlans.find(p => p.id === s.plan || p.name === s.plan);
           return {
             ...s,
+            managerName: s.manager_name || '',
             plan: s.plan as SchoolPlan,
             studentLimit: planDef ? planDef.studentLimit : (s.student_limit || 10),
             studentCount: s.student_count || 0,
@@ -217,8 +218,7 @@ const App: React.FC = () => {
             createdAt: s.created_at,
             enrollmentFee: s.enrollment_fee || 0,
             uniformPrice: s.uniform_price || 0,
-            hasMultipleUnits: s.is_multi_unit || false,
-            managerName: s.manager_name || ''
+            hasMultipleUnits: s.is_multi_unit || false
           };
         }),
         athletes: athletesData.map(a => ({
@@ -365,6 +365,7 @@ const App: React.FC = () => {
     const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
     if (!schoolId) return;
     try {
+      // Fix: Used correct property names trialDate, trialTime, and categoryInterest
       const { error } = await supabase.from('leads').insert([{
         school_id: schoolId,
         name: lead.name,
@@ -388,6 +389,7 @@ const App: React.FC = () => {
 
   const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>) => {
     try {
+      // Fix: Used correct property name competenceDate
       const { error } = await supabase.from('transactions').update({
         status: updates.status,
         amount: updates.amount,
@@ -407,6 +409,7 @@ const App: React.FC = () => {
     const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
     if (!schoolId) return;
     try {
+      // Fix: Used correct property name paymentDate
       const { error } = await supabase.from('transactions').insert([{
         school_id: schoolId,
         athlete_id: trans.athleteId,
@@ -480,7 +483,7 @@ const App: React.FC = () => {
 
     const leadsToNotify = state.leads.filter(l => 
       l.status === 'trial_scheduled' && 
-      l.trial_date === tomorrowStr && 
+      l.trialDate === tomorrowStr && 
       !l.reminderSent
     );
 
@@ -517,7 +520,8 @@ const App: React.FC = () => {
     for (const target of targets) {
       let message = template;
       if (type === 'trial') {
-        message = message.replace('{lead_name}', target.name).replace('{trial_date}', new Date(target.trial_date).toLocaleDateString('pt-BR')).replace('{trial_time}', target.trial_time || '');
+        // Fix: Use trialDate and trialTime instead of trial_date and trial_time
+        message = message.replace('{lead_name}', target.name).replace('{trial_date}', new Date(target.trialDate).toLocaleDateString('pt-BR')).replace('{trial_time}', target.trialTime || '');
       } else {
         const athlete = state.athletes.find(a => a.id === target.athleteId);
         message = message.replace('{athlete_name}', target.athleteName)

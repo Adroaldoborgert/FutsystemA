@@ -391,7 +391,8 @@ const WhatsAppIntegration: React.FC<WhatsAppIntegrationProps> = ({ schoolId, sch
                 <span className="text-sm font-bold text-slate-800 italic">Cobrança Atraso</span>
                 <span className="text-[10px] text-slate-400 uppercase tracking-widest">Alerta automático</span>
             </div>
-            <Switch active={rules.cobracoaAtraso} onClick={() => toggleRule('cobrancaAtraso')} />
+            {/* Fix: Property 'cobracoaAtraso' does not exist on type ... Did you mean 'cobrancaAtraso'? */}
+            <Switch active={rules.cobrancaAtraso} onClick={() => toggleRule('cobrancaAtraso')} />
           </div>
           <div className="p-4 bg-white border border-slate-100 rounded-2xl flex items-center justify-between">
             <div className="flex flex-col">

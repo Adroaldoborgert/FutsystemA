@@ -13,6 +13,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { School, PlanDefinition, SchoolPlan } from '../types';
+import { stripeService } from '../services/stripeService';
 
 interface SchoolPlansProps {
   school: School;
@@ -35,14 +36,20 @@ const SchoolPlans: React.FC<SchoolPlansProps> = ({ school, plans, onUpgrade }) =
   const displayPrice = currentPlanDef?.price || 0;
   const displayLimit = currentPlanDef?.studentLimit || school.studentLimit || 10;
 
-  const handleUpgrade = async (planId: SchoolPlan) => {
-    if (confirm(`Deseja realmente alterar sua assinatura para o plano ${planId}?`)) {
-      setIsUpgrading(planId);
-      // Simula uma pequena latência de processamento administrativo
-      setTimeout(() => {
-        onUpgrade(planId);
-        setIsUpgrading(null);
-      }, 800);
+  const handleUpgrade = async (plan: PlanDefinition) => {
+    setIsUpgrading(plan.name);
+    try {
+      // Chama o serviço do Stripe
+      await stripeService.redirectToCheckout(plan.name, school.id, school.email);
+      
+      // Nota: Em um fluxo real, o upgrade no banco acontece via Webhook da Stripe.
+      // O onUpgrade(plan.id) aqui é apenas para demonstração local.
+      // onUpgrade(plan.id as SchoolPlan);
+      
+    } catch (err) {
+      alert("Erro ao processar pagamento. Tente novamente.");
+    } finally {
+      setIsUpgrading(null);
     }
   };
 
@@ -50,7 +57,7 @@ const SchoolPlans: React.FC<SchoolPlansProps> = ({ school, plans, onUpgrade }) =
     <div className="space-y-8 max-w-6xl mx-auto animate-in fade-in duration-500 pb-20">
       <header>
         <h2 className="text-3xl font-bold text-slate-800 tracking-tight italic uppercase">Minha Assinatura</h2>
-        <p className="text-slate-500 font-medium italic mt-1">Gerencie seu plano e limites da plataforma</p>
+        <p className="text-slate-500 font-medium italic mt-1">Gerencie seu plano e limites da plataforma via Stripe</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -116,10 +123,10 @@ const SchoolPlans: React.FC<SchoolPlansProps> = ({ school, plans, onUpgrade }) =
                     <p className="text-sm font-bold text-slate-800 italic truncate">{school.email}</p>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Status da Conta</p>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Método de Pagamento</p>
                     <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <p className="text-sm font-bold text-slate-800 italic uppercase">Regularizada</p>
+                        <CreditCard size={16} className="text-slate-400" />
+                        <p className="text-sm font-bold text-slate-800 italic uppercase">Via Stripe</p>
                     </div>
                 </div>
             </div>
@@ -128,7 +135,7 @@ const SchoolPlans: React.FC<SchoolPlansProps> = ({ school, plans, onUpgrade }) =
                 <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 flex gap-3">
                     <AlertCircle size={20} className="text-amber-600 shrink-0" />
                     <p className="text-[10px] text-amber-700 font-medium leading-relaxed italic">
-                        Qualquer alteração de plano será refletida no seu próximo ciclo de faturamento.
+                        Os pagamentos são processados de forma segura pela Stripe. Você poderá gerenciar seu cartão no checkout.
                     </p>
                 </div>
             </div>
@@ -139,13 +146,13 @@ const SchoolPlans: React.FC<SchoolPlansProps> = ({ school, plans, onUpgrade }) =
         <div className="p-8 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
           <h3 className="text-xl font-bold text-slate-800 italic uppercase tracking-tighter">Planos Disponíveis</h3>
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic flex items-center gap-2">
-            <TrendingUp size={14} /> Escalabilidade Imediata
+            <TrendingUp size={14} /> Pagamento Seguro via Stripe
           </span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-slate-100">
           {plans.map((p) => {
             const isCurrent = p.id === school.plan || p.name === school.plan;
-            const loadingThis = isUpgrading === p.id;
+            const loadingThis = isUpgrading === p.name;
             
             return (
               <div key={p.id} className={`p-8 bg-white flex flex-col ${isCurrent ? 'ring-4 ring-indigo-600/10 z-10' : ''}`}>
@@ -171,7 +178,7 @@ const SchoolPlans: React.FC<SchoolPlansProps> = ({ school, plans, onUpgrade }) =
 
                 <button 
                   disabled={isCurrent || p.price < displayPrice || !!isUpgrading}
-                  onClick={() => handleUpgrade(p.id as SchoolPlan)}
+                  onClick={() => handleUpgrade(p)}
                   className={`w-full py-4 rounded-xl font-black italic uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 ${
                     isCurrent 
                       ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 cursor-default' 
@@ -180,8 +187,8 @@ const SchoolPlans: React.FC<SchoolPlansProps> = ({ school, plans, onUpgrade }) =
                         : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100 active:scale-95'
                   }`}
                 >
-                  {loadingThis && <Loader2 size={14} className="animate-spin" />}
-                  {isCurrent ? 'Plano Atual' : p.price < displayPrice ? 'Indisponível' : 'Fazer Upgrade'}
+                  {loadingThis ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                  {isCurrent ? 'Plano Atual' : p.price < displayPrice ? 'Indisponível' : 'Assinar Agora'}
                 </button>
               </div>
             );

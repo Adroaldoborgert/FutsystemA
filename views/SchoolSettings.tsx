@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-/* Added RefreshCw to imports */
-import { Settings, Save, Plus, Trash2, Edit, DollarSign, Users, Layout, GraduationCap, X, ChevronDown, Building2, Shirt, Clock, MapPin, CheckCircle2, AlertTriangle, User, Mail, Lock, Key, RefreshCw } from 'lucide-react';
+import { Settings, Save, Plus, Trash2, Edit, DollarSign, Users, Layout, GraduationCap, X, ChevronDown, Building2, Shirt, Clock, MapPin, CheckCircle2, AlertTriangle, Shield, Mail, Lock, Key, User } from 'lucide-react';
 import { School, SchoolConfig } from '../types';
 import { supabase } from '../services/supabase';
 
@@ -18,14 +17,16 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
   const [isUnitModalOpen, setIsUnitModalOpen] = useState(false);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<{table: string, id: string} | null>(null);
+
+  // Estados para o Modal de Confirmação de Exclusão
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ table: string, id: string } | null>(null);
 
   const [tempSchedules, setTempSchedules] = useState<{ day: string, time: string }[]>([{ day: '', time: '' }]);
 
-  // Estados para dados da escola e segurança
-  const [schoolData, setSchoolData] = useState({
+  // Estado local para os campos da aba "Escola" e "Segurança"
+  const [localSettings, setLocalSettings] = useState({
     name: school.name || '',
     managerName: school.managerName || '',
     email: school.email || '',
@@ -34,14 +35,14 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
     hasMultipleUnits: school.hasMultipleUnits || false
   });
 
-  const [passwordData, setPasswordData] = useState({
+  const [passwords, setPasswords] = useState({
     newPassword: '',
     confirmPassword: ''
   });
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+  // Sincroniza o estado local sempre que a escola (vinda do banco) mudar
   useEffect(() => {
-    setSchoolData({
+    setLocalSettings({
       name: school.name || '',
       managerName: school.managerName || '',
       email: school.email || '',
@@ -57,30 +58,6 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
     team: { name: '', schedule: '', category: '', unit: '', maxStudents: 20, active: true },
     unit: { name: '', isActive: true, address: '', phone: '', email: '', manager: '', operating_hours: '' }
   });
-
-  const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("As senhas não coincidem!");
-      return;
-    }
-    if (passwordData.newPassword.length < 6) {
-      alert("A senha deve ter no mínimo 6 caracteres.");
-      return;
-    }
-
-    setIsChangingPassword(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: passwordData.newPassword });
-      if (error) throw error;
-      alert("Senha alterada com sucesso!");
-      setPasswordData({ newPassword: '', confirmPassword: '' });
-    } catch (err: any) {
-      alert(err.message || "Erro ao alterar senha.");
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
 
   const handleAddOrUpdateConfig = async (table: string, data: any) => {
     let payload: any = {};
@@ -133,7 +110,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
       closeAllModals();
     } catch (err) {
       console.error(`Erro ao salvar em ${table}:`, err);
-      alert("Erro ao salvar dados.");
+      alert("Erro ao salvar dados. Verifique sua conexão ou permissões.");
     }
   };
 
@@ -144,7 +121,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
     setIsUnitModalOpen(false);
     setIsDeleteConfirmOpen(false);
     setEditingId(null);
-    setPendingDelete(null);
+    setDeleteTarget(null);
     setTempSchedules([{ day: '', time: '' }]);
     setFormData({
       category: { name: '' },
@@ -194,22 +171,37 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
     }
   };
 
-  const handleRemoveConfig = (table: string, id: string) => {
-    setPendingDelete({ table, id });
+  const handleOpenDeleteConfirm = (table: string, id: string) => {
+    setDeleteTarget({ table, id });
     setIsDeleteConfirmOpen(true);
   };
 
-  const confirmRemoval = async () => {
-    if (!pendingDelete) return;
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      const { error } = await supabase.from(pendingDelete.table).delete().eq('id', pendingDelete.id);
+      const { error } = await supabase.from(deleteTarget.table).delete().eq('id', deleteTarget.id);
       if (error) throw error;
       onRefresh();
+      closeAllModals();
     } catch (err) {
       console.error(`Erro ao excluir:`, err);
-      alert("Erro ao excluir item.");
-    } finally {
-      closeAllModals();
+      alert("Erro ao excluir item. Verifique sua conexão.");
+    }
+  };
+
+  const handlePasswordUpdate = async () => {
+    if (!passwords.newPassword || passwords.newPassword !== passwords.confirmPassword) {
+      alert("As senhas não coincidem ou estão vazias.");
+      return;
+    }
+    
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passwords.newPassword });
+      if (error) throw error;
+      alert("Senha atualizada com sucesso!");
+      setPasswords({ newPassword: '', confirmPassword: '' });
+    } catch (err: any) {
+      alert(err.message || "Erro ao atualizar senha.");
     }
   };
 
@@ -248,7 +240,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
 
   const tabs = [
     { id: 'escola', label: 'Escola' },
-    ...(schoolData.hasMultipleUnits ? [{ id: 'unidades', label: 'Unidades' }] : []),
+    ...(localSettings.hasMultipleUnits ? [{ id: 'unidades', label: 'Unidades' }] : []),
     { id: 'categorias', label: 'Categorias' },
     { id: 'planos', label: 'Planos' },
     { id: 'turmas', label: 'Turmas' },
@@ -256,7 +248,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
   ];
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-10 animate-in fade-in duration-500">
+    <div className="space-y-6 max-w-5xl mx-auto pb-10 animate-in fade-in duration-500">
       <div className="flex justify-between items-center border-b border-slate-100 pb-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800 tracking-tight italic uppercase">Configurações</h2>
@@ -267,84 +259,88 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
             type="button"
             onClick={(e) => {
               e.preventDefault();
-              onUpdateSettings(schoolData);
+              onUpdateSettings(localSettings);
             }}
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg shadow-emerald-100 active:scale-95 text-xs"
           >
-            <Save size={16} /> Salvar Alterações
+            <Save size={16} /> Salvar
           </button>
         )}
       </div>
 
-      <div className="flex gap-6 border-b border-slate-100 overflow-x-auto scrollbar-hide">
+      <div className="flex gap-6 border-b border-slate-100 overflow-x-auto scrollbar-hide relative no-radius-important">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id as any)}
-            className={`pb-3 text-xs font-bold transition-all relative whitespace-nowrap ${activeTab === tab.id ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`pb-3 px-1 text-xs font-bold transition-all relative whitespace-nowrap ${activeTab === tab.id ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
           >
             {tab.label}
-            {activeTab === tab.id && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 animate-in fade-in slide-in-from-left-2" />}
+            {activeTab === tab.id && (
+              <div className="absolute bottom-0 left-0 w-full h-[2.5px] bg-slate-900 rounded-none z-10" style={{ borderRadius: '0 !important' }} />
+            )}
           </button>
         ))}
       </div>
 
       {activeTab === 'escola' && (
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+          {/* DADOS DA UNIDADE */}
+          <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
             <div className="flex items-center gap-2 text-slate-800">
               <Building2 size={18} className="text-emerald-600" />
-              <h3 className="font-bold italic uppercase tracking-tighter text-sm">Dados da Unidade</h3>
+              <h3 className="font-black italic uppercase tracking-tighter text-sm">Dados da Unidade</h3>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Escola</label>
-                  <div className="relative">
-                    <Building2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
-                    <input 
-                      type="text" 
-                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/10 font-bold text-sm transition-all"
-                      value={schoolData.name}
-                      onChange={e => setSchoolData({...schoolData, name: e.target.value})}
-                    />
-                  </div>
-               </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Escola</label>
+                <div className="relative">
+                  <Building2 size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                  <input 
+                    type="text"
+                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/10 font-bold text-slate-800 text-sm italic uppercase"
+                    value={localSettings.name}
+                    onChange={e => setLocalSettings({...localSettings, name: e.target.value})}
+                  />
+                </div>
+              </div>
 
-               <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Gestor</label>
-                  <div className="relative">
-                    <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
-                    <input 
-                      type="text" 
-                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/10 font-bold text-sm transition-all"
-                      value={schoolData.managerName}
-                      onChange={e => setSchoolData({...schoolData, managerName: e.target.value})}
-                    />
-                  </div>
-               </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Gestor</label>
+                <div className="relative">
+                  <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                  <input 
+                    type="text"
+                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/10 font-bold text-slate-800 text-sm italic"
+                    value={localSettings.managerName}
+                    onChange={e => setLocalSettings({...localSettings, managerName: e.target.value})}
+                  />
+                </div>
+              </div>
 
-               <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Contato Público</label>
-                  <div className="relative">
-                    <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
-                    <input 
-                      type="email" 
-                      className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/10 font-bold text-sm transition-all"
-                      value={schoolData.email}
-                      onChange={e => setSchoolData({...schoolData, email: e.target.value})}
-                    />
-                  </div>
-                  <p className="text-[9px] text-slate-400 italic ml-1">Este e-mail será usado em comunicações automáticas para os pais.</p>
-               </div>
+              <div className="col-span-full space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Contato Público</label>
+                <div className="relative">
+                  <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                  <input 
+                    type="email"
+                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/10 font-bold text-slate-800 text-sm"
+                    value={localSettings.email}
+                    onChange={e => setLocalSettings({...localSettings, email: e.target.value})}
+                  />
+                </div>
+                <p className="text-[9px] text-slate-400 italic ml-1">Este e-mail será usado em comunicações automáticas para os pais.</p>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+          {/* FINANCEIRO DA UNIDADE */}
+          <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-6">
             <div className="flex items-center gap-2 text-slate-800">
               <DollarSign size={18} className="text-emerald-600" />
-              <h3 className="font-bold italic uppercase tracking-tighter text-sm">Taxas e Preferências</h3>
+              <h3 className="font-black italic uppercase tracking-tighter text-sm">Financeiro da Unidade</h3>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -352,17 +348,17 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <DollarSign size={16} className="text-emerald-500" />
-                    <h4 className="font-bold text-slate-700 text-xs uppercase italic tracking-tighter">Matrícula</h4>
+                    <h4 className="font-bold text-slate-700 text-xs uppercase italic">Taxa Matrícula</h4>
                   </div>
-                  <Switch active={schoolData.enrollmentFee > 0} onChange={() => setSchoolData({ ...schoolData, enrollmentFee: schoolData.enrollmentFee > 0 ? 0 : 50 })} />
+                  <Switch active={localSettings.enrollmentFee > 0} onChange={() => setLocalSettings({ ...localSettings, enrollmentFee: localSettings.enrollmentFee > 0 ? 0 : 50 })} />
                 </div>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">R$</span>
                   <input 
                     type="number"
-                    className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/10 font-bold italic text-sm transition-all"
-                    value={schoolData.enrollmentFee}
-                    onChange={e => setSchoolData({...schoolData, enrollmentFee: Number(e.target.value)})}
+                    className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/10 font-bold italic text-sm"
+                    value={localSettings.enrollmentFee}
+                    onChange={e => setLocalSettings({...localSettings, enrollmentFee: Number(e.target.value)})}
                   />
                 </div>
               </div>
@@ -370,15 +366,15 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
               <div className="space-y-2 p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
                 <div className="flex items-center gap-2">
                   <Shirt size={16} className="text-indigo-500" />
-                  <h4 className="font-bold text-slate-700 text-xs uppercase italic tracking-tighter">Uniforme</h4>
+                  <h4 className="font-bold text-slate-700 text-xs uppercase italic">Preço Uniforme</h4>
                 </div>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">R$</span>
                   <input 
                     type="number"
-                    className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-bold italic text-sm transition-all"
-                    value={schoolData.uniformPrice}
-                    onChange={e => setSchoolData({...schoolData, uniformPrice: Number(e.target.value)})}
+                    className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-bold italic text-sm"
+                    value={localSettings.uniformPrice}
+                    onChange={e => setLocalSettings({...localSettings, uniformPrice: Number(e.target.value)})}
                   />
                 </div>
               </div>
@@ -387,17 +383,17 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <MapPin size={16} className="text-violet-500" />
-                    <h4 className="font-bold text-slate-700 text-xs italic uppercase tracking-widest">Múltiplas Unidades</h4>
+                    <h4 className="font-bold text-slate-700 text-xs italic uppercase tracking-widest">Possui mais de uma unidade física</h4>
                   </div>
                   <Switch 
-                    active={schoolData.hasMultipleUnits} 
+                    active={localSettings.hasMultipleUnits} 
                     onChange={() => {
-                      const newVal = !schoolData.hasMultipleUnits;
-                      setSchoolData({ ...schoolData, hasMultipleUnits: newVal });
+                      const newVal = !localSettings.hasMultipleUnits;
+                      setLocalSettings({ ...localSettings, hasMultipleUnits: newVal });
                     }} 
                   />
                 </div>
-                <p className="text-[10px] text-slate-400 font-medium italic uppercase tracking-tighter">Ative se sua escolinha gerencia múltiplos endereços físicos.</p>
+                <p className="text-[10px] text-slate-400 font-medium italic">Ative se sua escolinha gerencia múltiplos endereços físicos.</p>
               </div>
             </div>
           </div>
@@ -405,65 +401,70 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
       )}
 
       {activeTab === 'seguranca' && (
-        <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
-           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm space-y-8">
+            <div className="flex items-center gap-2 text-slate-800">
+              <Shield size={18} className="text-brand-purple" />
+              <h3 className="font-black italic uppercase tracking-tighter text-sm">Segurança da Conta</h3>
+            </div>
+
+            {/* E-MAIL DE ACESSO */}
+            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
+              <div className="flex items-center gap-2 text-slate-400">
+                <Mail size={16} />
+                <span className="text-[10px] font-black uppercase tracking-widest">E-mail de Acesso</span>
+              </div>
+              <p className="text-lg font-black text-slate-800 italic">{school.email}</p>
+              <p className="text-[9px] text-slate-400 italic">Este é o seu e-mail de login. Para alterá-lo, contate o suporte FutSystem.</p>
+            </div>
+
+            {/* ALTERAR SENHA */}
+            <div className="space-y-6">
               <div className="flex items-center gap-2 text-slate-800">
-                <Lock size={18} className="text-violet-600" />
-                <h3 className="font-bold italic uppercase tracking-tighter text-sm">Segurança da Conta</h3>
+                <Key size={18} className="text-brand-purple" />
+                <h3 className="font-black italic uppercase tracking-tighter text-sm">Alterar Senha</h3>
               </div>
 
-              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
-                 <div className="flex items-center gap-2 text-slate-400">
-                    <Mail size={14} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">E-mail de Acesso</span>
-                 </div>
-                 <p className="font-bold text-slate-800 text-sm ml-6">{school.email}</p>
-                 <p className="text-[9px] text-slate-400 italic ml-6">Este é o seu e-mail de login. Para alterá-lo, contate o suporte FutSystem.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nova Senha</label>
+                  <div className="relative">
+                    <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                    <input 
+                      type="password"
+                      placeholder="••••••••"
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-slate-800 text-sm"
+                      value={passwords.newPassword}
+                      onChange={e => setPasswords({...passwords, newPassword: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Confirmar Nova Senha</label>
+                  <div className="relative">
+                    <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                    <input 
+                      type="password"
+                      placeholder="••••••••"
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-slate-800 text-sm"
+                      value={passwords.confirmPassword}
+                      onChange={e => setPasswords({...passwords, confirmPassword: e.target.value})}
+                    />
+                  </div>
+                </div>
               </div>
 
-              <form onSubmit={handleUpdatePassword} className="space-y-4 pt-4 border-t border-slate-50">
-                <div className="flex items-center gap-2 text-slate-600 mb-2">
-                   <Key size={14} />
-                   <h4 className="font-bold text-xs uppercase tracking-widest">Alterar Senha</h4>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                   <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nova Senha</label>
-                      <input 
-                        type="password" 
-                        required
-                        placeholder="••••••••"
-                        className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-violet-500/10 font-bold text-sm transition-all"
-                        value={passwordData.newPassword}
-                        onChange={e => setPasswordData({...passwordData, newPassword: e.target.value})}
-                      />
-                   </div>
-                   <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Confirmar Nova Senha</label>
-                      <input 
-                        type="password" 
-                        required
-                        placeholder="••••••••"
-                        className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-violet-500/10 font-bold text-sm transition-all"
-                        value={passwordData.confirmPassword}
-                        onChange={e => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                      />
-                   </div>
-                </div>
-
-                <div className="flex justify-end pt-2">
-                   <button 
-                    type="submit"
-                    disabled={isChangingPassword}
-                    className="bg-violet-600 hover:bg-violet-700 text-white px-6 py-2 rounded-xl font-bold transition-all flex items-center gap-2 shadow-lg shadow-violet-100 active:scale-95 text-xs uppercase tracking-widest italic"
-                   >
-                     {isChangingPassword ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
-                     Atualizar Senha
-                   </button>
-                </div>
-              </form>
-           </div>
+              <div className="flex justify-end">
+                <button 
+                  onClick={handlePasswordUpdate}
+                  className="bg-brand-purple hover:opacity-90 text-white px-8 py-3 rounded-xl font-black italic uppercase tracking-widest text-xs transition-all flex items-center gap-3 shadow-lg shadow-brand-purple/10 active:scale-95"
+                >
+                  <Save size={16} /> Atualizar Senha
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -499,7 +500,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button type="button" onClick={() => handleEditOpen('unidades', unit)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit size={14}/></button>
-                  <button type="button" onClick={() => handleRemoveConfig('school_units', unit.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14}/></button>
+                  <button type="button" onClick={() => handleOpenDeleteConfirm('school_units', unit.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14}/></button>
                 </div>
               </div>
             ))}
@@ -511,7 +512,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button type="button" onClick={() => handleEditOpen('categorias', cat)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit size={14}/></button>
-                  <button type="button" onClick={() => handleRemoveConfig('school_categories', cat.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14}/></button>
+                  <button type="button" onClick={() => handleOpenDeleteConfirm('school_categories', cat.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14}/></button>
                 </div>
               </div>
             ))}
@@ -529,7 +530,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button type="button" onClick={() => handleEditOpen('planos', plan)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit size={14}/></button>
-                  <button type="button" onClick={() => handleRemoveConfig('school_monthly_plans', plan.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14}/></button>
+                  <button type="button" onClick={() => handleOpenDeleteConfirm('school_monthly_plans', plan.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14}/></button>
                 </div>
               </div>
             ))}
@@ -547,7 +548,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button type="button" onClick={() => handleEditOpen('turmas', team)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit size={14}/></button>
-                  <button type="button" onClick={() => handleRemoveConfig('school_teams', team.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14}/></button>
+                  <button type="button" onClick={() => handleOpenDeleteConfirm('school_teams', team.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={14}/></button>
                 </div>
               </div>
             ))}
@@ -555,40 +556,41 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
         </div>
       )}
 
-      {/* Modal de Confirmação de Exclusão */}
+      {/* Modal de Confirmação de Exclusão conforme Imagem de Referência */}
       {isDeleteConfirmOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[10px] shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-200 border border-slate-100">
-            <div className="p-8 text-center space-y-6">
-              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto">
-                <AlertTriangle size={32} />
+          <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[440px] overflow-hidden animate-in zoom-in duration-200 p-10 flex flex-col items-center">
+            <div className="mb-10 flex justify-center">
+              <div className="w-24 h-24 bg-red-50 rounded-[20px] flex items-center justify-center">
+                <AlertTriangle size={48} className="text-red-500" />
               </div>
-              <div className="space-y-2">
-                <h3 className="font-black text-slate-800 uppercase italic tracking-tighter text-lg">Confirmar Exclusão?</h3>
-                <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                  Deseja realmente excluir este item permanentemente? Esta ação não pode ser desfeita.
-                </p>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button 
-                  onClick={closeAllModals}
-                  className="flex-1 py-3 bg-slate-50 text-slate-600 font-bold rounded-[10px] hover:bg-slate-100 transition-all text-xs uppercase tracking-widest italic"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={confirmRemoval}
-                  className="flex-1 py-3 bg-red-600 text-white font-black rounded-[10px] hover:bg-red-700 transition-all shadow-lg shadow-red-100 text-xs uppercase tracking-widest italic"
-                >
-                  OK
-                </button>
-              </div>
+            </div>
+            
+            <h3 className="text-[1.8rem] font-black text-brand-mid italic uppercase tracking-tighter mb-4 text-center">CONFIRMAR EXCLUSÃO?</h3>
+            <p className="text-slate-500 font-medium text-center mb-10 leading-relaxed max-w-[320px]">
+              Deseja realmente excluir este item permanentemente? Esta ação não pode ser desfeita.
+            </p>
+            
+            <div className="grid grid-cols-2 gap-4 w-full">
+              <button 
+                type="button" 
+                onClick={closeAllModals} 
+                className="py-4 bg-slate-50 text-slate-500 font-black rounded-[10px] hover:bg-slate-100 transition-all uppercase italic tracking-widest text-[11px]"
+              >
+                CANCELAR
+              </button>
+              <button 
+                type="button" 
+                onClick={executeDelete} 
+                className="py-4 bg-[#E5322E] text-white font-black rounded-[10px] hover:bg-red-700 transition-all shadow-xl shadow-red-500/20 uppercase italic tracking-widest text-[11px]"
+              >
+                OK
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Outros Modais (Unidade, Categoria, Plano, Turma) mantidos conforme original... */}
       {isUnitModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-200">
@@ -711,7 +713,7 @@ const SchoolSettings: React.FC<SchoolSettingsProps> = ({ school, config, onUpdat
                 <input placeholder="Ex: Turma A" className="w-full p-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:ring-1 focus:ring-emerald-500 text-sm" value={formData.team.name} onChange={e => setFormData({...formData, team: {...formData.team, name: e.target.value}})} />
               </div>
 
-              {schoolData.hasMultipleUnits && config.units.length > 0 && (
+              {localSettings.hasMultipleUnits && config.units.length > 0 && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700">Unidade *</label>
                   <div className="relative">

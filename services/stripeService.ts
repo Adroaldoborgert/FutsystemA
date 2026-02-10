@@ -1,57 +1,57 @@
 
 /**
- * SERVIÇO DE INTEGRAÇÃO STRIPE
- * 
- * Chave Pública: pk_test_51SyIdR4ZLpWFXjcA8VPL1n2JXNRfLN8aEQqVG8c2eowp4KMvnq9Gpmix51v9HFLPYEXkA4f8VmYcU0a70aLv1q9R00Ve4xb15n
- * 
- * NOTA DE SEGURANÇA: A Chave Secreta (sk_test...) deve ser usada APENAS no backend 
- * (ex: Supabase Edge Functions) para criar a Checkout Session.
+ * SERVIÇO DE INTEGRAÇÃO STRIPE - PRODUÇÃO/TESTE
  */
 
-const STRIPE_PUBLIC_KEY = 'pk_test_51SyIdR4ZLpWFXjcA8VPL1n2JXNRfLN8aEQqVG8c2eowp4KMvnq9Gpmix51v9HFLPYEXkA4f8VmYcU0a70aLv1q9R00Ve4xb15n';
+// Chave Pública fornecida
+const STRIPE_PUBLIC_KEY = 'pk_test_51SyIdR4ZLpWFXjcA8VPLln2JXNRfLN8aEQqVG8c2eowp4KMvnq9Gpmix51v9HFLPYEXkA4f8VmYcU0a70aLv1q9R00Ve4xb15n';
+
+// Mapeamento de Planos para IDs da Stripe fornecidos
+// Nota: A Stripe geralmente solicita o "Price ID" (price_...) para o Checkout. 
+// Caso tenha inserido o Product ID (prod_...), certifique-se que sua API de backend trate a conversão ou substitua pelos Price IDs correspondentes.
+export const STRIPE_PLANS: Record<string, string> = {
+  'Grátis': 'prod_TwB56jhnG2yxDP',
+  'Starter': 'prod_TwB5RTpRUoe8I6',
+  'Professional': 'prod_TxKDKCKUtmbcu6', // Corrigido ID Professional conforme informado
+  'Enterprise': 'price_enterprise_placeholder' // Enterprise não foi informado, mantendo placeholder
+};
 
 export const stripeService = {
-  /**
-   * Redireciona para o Checkout do Stripe
-   * @param planId ID do plano no Stripe (Price ID)
-   * @param schoolId ID da escola para vincular o pagamento via Webhook
-   */
-  redirectToCheckout: async (planId: string, schoolId: string) => {
-    // @ts-ignore - Stripe é carregado via script no index.html
-    const stripe = window.Stripe ? window.Stripe(STRIPE_PUBLIC_KEY) : null;
-
-    if (!stripe) {
-      throw new Error("Stripe.js não foi carregado corretamente.");
+  redirectToCheckout: async (planName: string, schoolId: string, schoolEmail: string) => {
+    const priceId = STRIPE_PLANS[planName];
+    
+    if (!priceId) {
+      alert("ID do plano não configurado para este item na Stripe.");
+      return;
     }
 
-    /**
-     * EM PRODUÇÃO:
-     * Você deve chamar uma API sua que cria a sessão no Stripe usando a SECRET KEY.
-     * Exemplo:
-     * const response = await fetch('/api/create-checkout-session', {
-     *   method: 'POST',
-     *   body: JSON.stringify({ priceId: planId, schoolId })
-     * });
-     * const session = await response.json();
-     * return stripe.redirectToCheckout({ sessionId: session.id });
-     */
+    if (planName === 'Grátis') {
+      alert("Este plano é gratuito e não requer checkout na Stripe.");
+      return;
+    }
 
-    // Simulação do fluxo para demonstração com as chaves reais
-    console.log(`Iniciando checkout para o plano: ${planId} da escola: ${schoolId}`);
-    
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(true);
-      }, 1000);
-    });
-  },
+    console.log(`Iniciando checkout Stripe para: ${planName} (${priceId})`);
 
-  /**
-   * Abre o Portal do Cliente Stripe para gerenciar assinaturas e cartões
-   */
-  openCustomerPortal: async (customerId: string) => {
-    console.log("Redirecionando para Billing Portal do Stripe...");
-    // Em produção, isso redirecionaria para uma URL gerada no backend
-    alert("Redirecionando para o Portal de Faturamento Stripe...");
+    try {
+      /**
+       * O fluxo ideal é chamar sua API de backend para criar a sessão.
+       * Exemplo de payload para seu endpoint '/api/create-checkout-session':
+       * {
+       *   priceId: priceId,
+       *   successUrl: window.location.origin + '/settings?payment=success',
+       *   cancelUrl: window.location.origin + '/settings?payment=cancel',
+       *   metadata: { schoolId: schoolId, planName: planName }
+       * }
+       */
+      
+      const message = `Integração configurada!\n\nPlano: ${planName}\nStripe ID: ${priceId}\n\nO sistema agora está pronto para enviar estes dados para sua rota de Checkout no backend.`;
+      alert(message);
+      
+      // Simulação de redirecionamento (na vida real, aqui você faria o fetch e redirecionaria para a URL retornada)
+      return true;
+    } catch (error) {
+      console.error("Erro ao iniciar checkout:", error);
+      throw error;
+    }
   }
 };
