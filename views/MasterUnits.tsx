@@ -9,7 +9,9 @@ import {
   Plus,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { School, SchoolPlan, PlanDefinition } from '../types';
 
@@ -20,6 +22,7 @@ interface MasterUnitsProps {
   onUpdatePlan: (schoolId: string, plan: SchoolPlan) => void;
   onResetCredentials: (schoolId: string) => void;
   onAddSchool: (school: Partial<School>) => void;
+  onDeleteSchool: (schoolId: string) => void;
 }
 
 const MasterUnits: React.FC<MasterUnitsProps> = ({ 
@@ -28,12 +31,15 @@ const MasterUnits: React.FC<MasterUnitsProps> = ({
   onImpersonate, 
   onUpdatePlan, 
   onResetCredentials,
-  onAddSchool
+  onAddSchool,
+  onDeleteSchool
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState<{schoolId: string, open: boolean}>({schoolId: '', open: false});
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [schoolToDelete, setSchoolToDelete] = useState<{id: string, name: string} | null>(null);
   
   const [newSchool, setNewSchool] = useState({
     name: '',
@@ -54,6 +60,14 @@ const MasterUnits: React.FC<MasterUnitsProps> = ({
     onAddSchool(newSchool);
     setIsModalOpen(false);
     setNewSchool({ name: '', managerName: '', email: '', password: '', plan: SchoolPlan.FREE });
+  };
+
+  const confirmDelete = () => {
+    if (schoolToDelete) {
+      onDeleteSchool(schoolToDelete.id);
+      setIsDeleteModalOpen(false);
+      setSchoolToDelete(null);
+    }
   };
 
   return (
@@ -139,6 +153,16 @@ const MasterUnits: React.FC<MasterUnitsProps> = ({
                       className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                     >
                       <LogIn size={18} />
+                    </button>
+                    <button 
+                      title="Excluir Unidade"
+                      onClick={() => {
+                        setSchoolToDelete({ id: school.id, name: school.name });
+                        setIsDeleteModalOpen(true);
+                      }}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 </td>
@@ -281,6 +305,44 @@ const MasterUnits: React.FC<MasterUnitsProps> = ({
                   </button>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Confirmação de Exclusão */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-[440px] overflow-hidden animate-in zoom-in duration-200 p-10 flex flex-col items-center">
+            <div className="mb-10 flex justify-center">
+              <div className="w-24 h-24 bg-red-50 rounded-[20px] flex items-center justify-center">
+                <AlertTriangle size={48} className="text-red-500" />
+              </div>
+            </div>
+            
+            <h3 className="text-[1.8rem] font-black text-brand-mid italic uppercase tracking-tighter mb-4 text-center">CONFIRMAR EXCLUSÃO?</h3>
+            <p className="text-slate-500 font-medium text-center mb-10 leading-relaxed max-w-[320px]">
+              Deseja realmente excluir a unidade <strong className="text-slate-800">{schoolToDelete?.name}</strong> permanentemente? Esta ação removerá todos os atletas e dados vinculados.
+            </p>
+            
+            <div className="grid grid-cols-2 gap-4 w-full">
+              <button 
+                type="button" 
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setSchoolToDelete(null);
+                }} 
+                className="py-4 bg-slate-50 text-slate-500 font-black rounded-[10px] hover:bg-slate-100 transition-all uppercase italic tracking-widest text-[11px]"
+              >
+                CANCELAR
+              </button>
+              <button 
+                type="button" 
+                onClick={confirmDelete} 
+                className="py-4 bg-[#E5322E] text-white font-black rounded-[10px] hover:bg-red-700 transition-all shadow-xl shadow-red-500/20 uppercase italic tracking-widest text-[11px]"
+              >
+                OK
+              </button>
             </div>
           </div>
         </div>

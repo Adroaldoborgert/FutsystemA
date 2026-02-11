@@ -397,7 +397,7 @@ const App: React.FC = () => {
         trial_date: lead.trialDate === '' ? null : lead.trialDate,
         trial_time: lead.trialTime === '' ? null : lead.trialTime,
         origin: lead.origin,
-        category_interest: lead.category_interest,
+        category_interest: lead.categoryInterest,
         status: lead.status || 'new',
         notes: lead.notes,
         unit: lead.unit
@@ -430,7 +430,6 @@ const App: React.FC = () => {
     const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
     if (!schoolId) return;
     try {
-      // Fix: Use camelCase properties from the Transaction type (athleteId, athleteName, competenceDate, paymentDate) for trans object access
       const { error } = await supabase.from('transactions').insert([{
         school_id: schoolId,
         athlete_id: trans.athleteId,
@@ -570,7 +569,7 @@ const App: React.FC = () => {
           </div>
           
           <h1 className="text-[2.2rem] font-black leading-tight text-brand-purple italic uppercase tracking-tighter mb-1">FUTSYSTEM</h1>
-          <p className="text-slate-400 mb-10 font-black uppercase tracking-widest text-[10px]">Gestão Esportiva Profissional</p>
+          <p className="text-slate-400 mb-10 font-black uppercase tracking-widest text-[10px]">Gestão Esportiva Professional</p>
           
           <form onSubmit={handleAuthSubmit} className="space-y-5 w-full text-left">
             {isSignUp && (
@@ -668,8 +667,15 @@ const App: React.FC = () => {
           ) : (
             <>
               {currentPath === 'master-dashboard' && <MasterDashboard schools={state.schools} />}
-              {currentPath === 'master-units' && ( <MasterUnits schools={state.schools} plans={state.plans} onImpersonate={(id) => { setState(prev => ({ ...prev, impersonatingSchoolId: id })); setCurrentPath('school-dashboard'); }} onUpdatePlan={async (sid, p) => { await supabase.from('schools').update({ plan: p }).eq('id', sid); fetchData(); }} onResetCredentials={() => {}} onAddSchool={async (s) => { await supabase.from('schools').insert([s]); fetchData(); }} /> )}
-              {currentPath === 'master-plans' && ( <MasterPlans plans={state.plans} onUpdatePlanDefinition={async (pid, up) => { await supabase.from('plans').update({ name: up.name, price: up.price, student_limit: up.student_limit, features: up.features }).eq('id', pid); fetchData(); }} /> )}
+              {currentPath === 'master-units' && ( <MasterUnits schools={state.schools} plans={state.plans} onImpersonate={(id) => { setState(prev => ({ ...prev, impersonatingSchoolId: id })); setCurrentPath('school-dashboard'); }} onUpdatePlan={async (sid, p) => { await supabase.from('schools').update({ plan: p }).eq('id', sid); fetchData(); }} onResetCredentials={() => {}} onAddSchool={async (s) => { await supabase.from('schools').insert([s]); fetchData(); }} onDeleteSchool={async (id) => { 
+                const { error } = await supabase.from('schools').delete().eq('id', id); 
+                if (error) {
+                    alert("Erro ao excluir do banco de dados: " + error.message);
+                } else {
+                    fetchData();
+                }
+              }} /> )}
+              {currentPath === 'master-plans' && ( <MasterPlans plans={state.plans} onUpdatePlanDefinition={async (pid, up) => { await supabase.from('plans').update({ name: up.name, price: up.price, student_limit: up.studentLimit, features: up.features }).eq('id', pid); fetchData(); }} /> )}
               {currentPath === 'master-finance' && <MasterFinance schools={state.schools} />}
               {currentPath === 'master-settings' && <MasterSettings featureFlags={state.featureFlags} onUpdateFlags={handleUpdateFeatureFlags} />}
               

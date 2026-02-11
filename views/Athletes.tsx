@@ -422,8 +422,8 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-[4px] p-4">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-200">
-            <div className="p-5 pb-2 flex justify-between items-center bg-slate-50/50">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-[1100px] overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[95vh]">
+            <div className="p-6 pb-2 flex justify-between items-center bg-slate-50/50 shrink-0">
               <div>
                 <h3 className="text-xl font-black text-slate-800 italic uppercase tracking-tighter">{editingAthlete ? 'Editar Cadastro' : 'Nova Matrícula'}</h3>
                 <p className="text-[10px] text-slate-500 font-medium italic uppercase">Gestão administrativa de acesso à unidade</p>
@@ -431,47 +431,47 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
               <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-white rounded-full"><X size={20} /></button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-5 pt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+            <form onSubmit={handleSubmit} className="p-8 pt-4 space-y-6 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-5">
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Nome do Aluno *</label>
-                  <input required type="text" placeholder="Nome completo" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all font-bold italic text-sm" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                  <input required type="text" placeholder="Nome completo" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all font-bold italic text-sm" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">CPF do Aluno</label>
-                  <input type="text" placeholder="000.000.000-00" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.studentCpf} onChange={e => setFormData({...formData, studentCpf: e.target.value})} />
+                  <input type="text" placeholder="000.000.000-00" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.studentCpf} onChange={e => setFormData({...formData, studentCpf: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Data de Nascimento</label>
-                  <input type="date" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 text-slate-600 font-bold text-sm" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} />
+                  <input type="date" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 text-slate-600 font-bold text-sm" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Responsável</label>
-                  <input type="text" placeholder="Nome do pai ou mãe" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentName} onChange={e => setFormData({...formData, parentName: e.target.value})} />
+                  <input type="text" placeholder="Nome do pai ou mãe" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentName} onChange={e => setFormData({...formData, parentName: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">CPF do Responsável</label>
-                  <input type="text" placeholder="000.000.000-00" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentCpf} onChange={e => setFormData({...formData, parentCpf: e.target.value})} />
+                  <input type="text" placeholder="000.000.000-00" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentCpf} onChange={e => setFormData({...formData, parentCpf: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">WhatsApp Responsável *</label>
-                  <input required type="text" placeholder="(00) 00000-0000" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-bold text-sm" value={formData.parentPhone} onChange={e => setFormData({...formData, parentPhone: e.target.value})} />
+                  <input required type="text" placeholder="(00) 00000-0000" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-bold text-sm" value={formData.parentPhone} onChange={e => setFormData({...formData, parentPhone: e.target.value})} />
                 </div>
 
-                <div className="space-y-1 col-span-2">
+                <div className="space-y-1 md:col-span-2 lg:col-span-3">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Endereço do Responsável</label>
-                  <input type="text" placeholder="Rua, número, bairro..." className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentAddress} onChange={e => setFormData({...formData, parentAddress: e.target.value})} />
+                  <input type="text" placeholder="Rua, número, bairro..." className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentAddress} onChange={e => setFormData({...formData, parentAddress: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Categoria</label>
                   <div className="relative">
-                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
+                    <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
                       <option value="">Selecione...</option>
                       {config.categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
@@ -482,7 +482,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Turma</label>
                   <div className="relative">
-                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.team} onChange={e => setFormData({...formData, team: e.target.value})}>
+                    <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.team} onChange={e => setFormData({...formData, team: e.target.value})}>
                       <option value="">Selecione...</option>
                       {config.teams.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                     </select>
@@ -496,7 +496,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
                     <div className="relative">
                       <select 
                         required 
-                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none font-bold italic text-sm" 
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none font-bold italic text-sm" 
                         value={formData.unit} 
                         onChange={e => setFormData({...formData, unit: e.target.value})}
                       >
@@ -513,7 +513,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Plano Financeiro</label>
                   <div className="relative">
-                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.plan} onChange={e => setFormData({...formData, plan: e.target.value})}>
+                    <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.plan} onChange={e => setFormData({...formData, plan: e.target.value})}>
                       <option value="">Selecione...</option>
                       {config.monthlyPlans.map(p => <option key={p.id} value={p.name}>{p.name} - R$ {p.price}</option>)}
                     </select>
@@ -523,13 +523,13 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
 
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Data de Início *</label>
-                  <input required type="date" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 text-slate-600 font-bold text-sm" value={formData.enrollmentDate} onChange={e => setFormData({...formData, enrollmentDate: e.target.value})} />
+                  <input required type="date" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 text-slate-600 font-bold text-sm" value={formData.enrollmentDate} onChange={e => setFormData({...formData, enrollmentDate: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Status do Atleta</label>
                   <div className="relative">
-                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as 'active' | 'inactive'})}>
+                    <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as 'active' | 'inactive'})}>
                       <option value="active">Ativo</option>
                       <option value="inactive">Inativo</option>
                     </select>
@@ -558,8 +558,8 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
                 </div>
               </div>
 
-              <div className="pt-2">
-                <button type="submit" className="w-full py-3 bg-indigo-600 text-white font-black rounded-[1.2rem] hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 italic uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 text-xs">
+              <div className="pt-4 shrink-0">
+                <button type="submit" className="w-full py-4 bg-indigo-600 text-white font-black rounded-[1.2rem] hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 italic uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 text-xs">
                   {editingAthlete ? 'Atualizar Dados' : 'Efetivar Matrícula'}
                 </button>
               </div>
