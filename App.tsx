@@ -141,7 +141,22 @@ const App: React.FC = () => {
         if (signInErr) throw signInErr;
       }
     } catch (err: any) {
-      setError(err.message || "Erro na autenticação.");
+      // Tradução de mensagens de erro comuns do Supabase para PT-BR
+      let errorMsg = err.message || "Erro na autenticação.";
+      
+      if (errorMsg === "Invalid login credentials") {
+        errorMsg = "E-mail ou senha incorretos.";
+      } else if (errorMsg.includes("Email not confirmed")) {
+        errorMsg = "E-mail não confirmado. Por favor, verifique sua caixa de entrada.";
+      } else if (errorMsg.includes("User already registered")) {
+        errorMsg = "Este e-mail já está cadastrado em nossa base.";
+      } else if (errorMsg.includes("Password should be at least 6 characters")) {
+        errorMsg = "A senha deve ter pelo menos 6 caracteres.";
+      } else if (errorMsg.includes("rate limit")) {
+        errorMsg = "Muitas tentativas. Por favor, aguarde um momento antes de tentar novamente.";
+      }
+
+      setError(errorMsg);
     } finally {
       setIsAuthLoading(false);
     }
@@ -365,7 +380,6 @@ const App: React.FC = () => {
     const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
     if (!schoolId) return;
     try {
-      // Fix: Used correct property names trialDate, trialTime, and categoryInterest
       const { error } = await supabase.from('leads').insert([{
         school_id: schoolId,
         name: lead.name,
@@ -389,7 +403,6 @@ const App: React.FC = () => {
 
   const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>) => {
     try {
-      // Fix: Used correct property name competenceDate
       const { error } = await supabase.from('transactions').update({
         status: updates.status,
         amount: updates.amount,
@@ -409,7 +422,6 @@ const App: React.FC = () => {
     const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
     if (!schoolId) return;
     try {
-      // Fix: Used correct property name paymentDate
       const { error } = await supabase.from('transactions').insert([{
         school_id: schoolId,
         athlete_id: trans.athleteId,
@@ -520,7 +532,6 @@ const App: React.FC = () => {
     for (const target of targets) {
       let message = template;
       if (type === 'trial') {
-        // Fix: Use trialDate and trialTime instead of trial_date and trial_time
         message = message.replace('{lead_name}', target.name).replace('{trial_date}', new Date(target.trialDate).toLocaleDateString('pt-BR')).replace('{trial_time}', target.trialTime || '');
       } else {
         const athlete = state.athletes.find(a => a.id === target.athleteId);

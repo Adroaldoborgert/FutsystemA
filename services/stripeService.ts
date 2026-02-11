@@ -1,16 +1,16 @@
 
 /**
- * SERVIÇO DE INTEGRAÇÃO STRIPE - REDIRECIONAMENTO DIRETO
+ * SERVIÇO DE INTEGRAÇÃO STRIPE - ATUALIZADO COM PRICE IDs REAIS
  */
 
-const STRIPE_PUBLIC_KEY = 'pk_test_51SyIdR4ZLpWFXjcA8VPLln2JXNRfLN8aEQqVG8c2eowp4KMvnq9Gpmix51v9HFLPYEXkA4f8VmYcU0a7OaLv1q9R00Ve4xb15n';
+const STRIPE_PUBLIC_KEY = 'pk_test_51SyIdR4ZLpWFXjcA8VPLln2JXNRfLN8aEQqVG8c2eowp4KMvnq9Gpmix51v9HFLPYEXkA4f8VmYcU0a70aLv1q9R00Ve4xb15n';
 
-// Mapeamento com os PRICE IDs reais fornecidos
+// Mapeamento com os PRICE IDs reais fornecidos pelo usuário
 export const STRIPE_PLANS: Record<string, string> = {
   'Grátis': 'price_1SyIj24ZLpWFXjcAodyr9T4K',
   'Starter': 'price_1SyIjd4ZLpWFXjcAw4L8WMGM',
   'Professional': 'price_1SzPYg4ZLpWFXjcAqHmnmJBd',
-  'Enterprise': 'price_1SzPYg4ZLpWFXjcAqHmnmJBd' // Placeholder usando o pro caso não tenha enterprise
+  'Enterprise': 'price_1SzPYg4ZLpWFXjcAqHmnmJBd' // Placeholder usando o pro
 };
 
 export const stripeService = {
@@ -23,7 +23,7 @@ export const stripeService = {
     }
 
     if (planName === 'Grátis') {
-      alert("Plano gratuito ativado com sucesso!");
+      alert("Você selecionou o plano Grátis!");
       return;
     }
 
@@ -32,10 +32,10 @@ export const stripeService = {
       const stripe = (window as any).Stripe(STRIPE_PUBLIC_KEY);
       
       if (!stripe) {
-        throw new Error("Stripe.js não carregado. Verifique sua conexão.");
+        throw new Error("Stripe.js não pôde ser carregado. Verifique o console.");
       }
 
-      console.log(`Redirecionando para checkout: ${planName} (${priceId})`);
+      console.log(`Iniciando Checkout para: ${planName} com o preço ${priceId}`);
 
       // Redirecionamento direto via Client-only Integration
       const { error } = await stripe.redirectToCheckout({
@@ -44,10 +44,10 @@ export const stripeService = {
           quantity: 1,
         }],
         mode: 'subscription',
-        successUrl: `${window.location.origin}/settings?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+        successUrl: `${window.location.origin}/settings?payment=success`,
         cancelUrl: `${window.location.origin}/settings?payment=cancel`,
         customerEmail: schoolEmail,
-        clientReferenceId: schoolId, // Identificador da escola para seu controle
+        clientReferenceId: schoolId,
       });
 
       if (error) {
@@ -57,11 +57,18 @@ export const stripeService = {
     } catch (error: any) {
       console.error("Erro no Stripe Checkout:", error);
       
-      // Se falhar por ser uma conta nova sem Client-side enabled, mostra instrução clara
-      if (error.message?.includes("client-side")) {
-        alert("Erro: Você precisa ativar 'Client-side Checkout' no painel da Stripe (Settings > Checkout settings).");
+      // Se o erro for especificamente a falta de ativação no painel
+      if (error.message?.includes("client-only")) {
+        alert(
+          "ERRO DE CONFIGURAÇÃO NA STRIPE:\n\n" +
+          "Para o botão funcionar, você DEVE ativar o 'Client-side Checkout' no seu painel da Stripe.\n\n" +
+          "1. Vá em: Dashboard > Settings > Checkout and Payment Links\n" +
+          "2. Ative o botão: 'Client-side Checkout'\n" +
+          "3. Salve as alterações."
+        );
+        window.open("https://dashboard.stripe.com/account/checkout/settings", "_blank");
       } else {
-        alert(`Erro ao iniciar pagamento: ${error.message}`);
+        alert(`Erro ao processar pagamento: ${error.message}`);
       }
     }
   }
