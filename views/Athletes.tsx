@@ -69,7 +69,10 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
     status: 'active',
     enrollmentDate: new Date().toISOString().split('T')[0],
     notes: '',
-    unit: ''
+    unit: '',
+    studentCpf: '',
+    parentCpf: '',
+    parentAddress: ''
   });
 
   const stats = useMemo(() => {
@@ -126,7 +129,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
         name: '', parentName: '', parentPhone: '', birthDate: '',
         category: '', team: '', plan: '', hasUniform: false,
         status: 'active', enrollmentDate: new Date().toISOString().split('T')[0],
-        notes: '', unit: ''
+        notes: '', unit: '', studentCpf: '', parentCpf: '', parentAddress: ''
       });
     }
     setIsModalOpen(true);
@@ -436,6 +439,11 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
                 </div>
 
                 <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">CPF do Aluno</label>
+                  <input type="text" placeholder="000.000.000-00" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.studentCpf} onChange={e => setFormData({...formData, studentCpf: e.target.value})} />
+                </div>
+
+                <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Data de Nascimento</label>
                   <input type="date" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 text-slate-600 font-bold text-sm" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} />
                 </div>
@@ -446,8 +454,18 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
                 </div>
 
                 <div className="space-y-1">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">CPF do Responsável</label>
+                  <input type="text" placeholder="000.000.000-00" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentCpf} onChange={e => setFormData({...formData, parentCpf: e.target.value})} />
+                </div>
+
+                <div className="space-y-1">
                   <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">WhatsApp Responsável *</label>
                   <input required type="text" placeholder="(00) 00000-0000" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-bold text-sm" value={formData.parentPhone} onChange={e => setFormData({...formData, parentPhone: e.target.value})} />
+                </div>
+
+                <div className="space-y-1 col-span-2">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Endereço do Responsável</label>
+                  <input type="text" placeholder="Rua, número, bairro..." className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentAddress} onChange={e => setFormData({...formData, parentAddress: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">

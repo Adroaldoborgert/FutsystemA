@@ -141,7 +141,6 @@ const App: React.FC = () => {
         if (signInErr) throw signInErr;
       }
     } catch (err: any) {
-      // Tradução de mensagens de erro comuns do Supabase para PT-BR
       let errorMsg = err.message || "Erro na autenticação.";
       
       if (errorMsg === "Invalid login credentials") {
@@ -251,7 +250,10 @@ const App: React.FC = () => {
           lastPayment: a.last_payment || '',
           enrollmentDate: a.enrollment_date,
           notes: a.notes || '',
-          unit: a.unit || ''
+          unit: a.unit || '',
+          studentCpf: a.student_cpf || '',
+          parentCpf: a.parent_cpf || '',
+          parentAddress: a.parent_address || ''
         })),
         leads: (leadsData || []).map(l => ({
           id: l.id,
@@ -334,7 +336,10 @@ const App: React.FC = () => {
         status: athlete.status || 'active',
         enrollment_date: athlete.enrollmentDate || new Date().toISOString().split('T')[0],
         notes: athlete.notes,
-        unit: athlete.unit
+        unit: athlete.unit,
+        student_cpf: athlete.studentCpf,
+        parent_cpf: athlete.parentCpf,
+        parent_address: athlete.parentAddress
       }]);
       if (error) throw error;
       fetchData();
@@ -357,7 +362,10 @@ const App: React.FC = () => {
         status: updates.status,
         enrollment_date: updates.enrollmentDate,
         notes: updates.notes,
-        unit: updates.unit
+        unit: updates.unit,
+        student_cpf: updates.studentCpf,
+        parent_cpf: updates.parentCpf,
+        parent_address: updates.parentAddress
       }).eq('id', id);
       if (error) throw error;
       fetchData();
@@ -389,7 +397,7 @@ const App: React.FC = () => {
         trial_date: lead.trialDate === '' ? null : lead.trialDate,
         trial_time: lead.trialTime === '' ? null : lead.trialTime,
         origin: lead.origin,
-        category_interest: lead.categoryInterest,
+        category_interest: lead.category_interest,
         status: lead.status || 'new',
         notes: lead.notes,
         unit: lead.unit
@@ -422,6 +430,7 @@ const App: React.FC = () => {
     const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
     if (!schoolId) return;
     try {
+      // Fix: Use camelCase properties from the Transaction type (athleteId, athleteName, competenceDate, paymentDate) for trans object access
       const { error } = await supabase.from('transactions').insert([{
         school_id: schoolId,
         athlete_id: trans.athleteId,
@@ -660,7 +669,7 @@ const App: React.FC = () => {
             <>
               {currentPath === 'master-dashboard' && <MasterDashboard schools={state.schools} />}
               {currentPath === 'master-units' && ( <MasterUnits schools={state.schools} plans={state.plans} onImpersonate={(id) => { setState(prev => ({ ...prev, impersonatingSchoolId: id })); setCurrentPath('school-dashboard'); }} onUpdatePlan={async (sid, p) => { await supabase.from('schools').update({ plan: p }).eq('id', sid); fetchData(); }} onResetCredentials={() => {}} onAddSchool={async (s) => { await supabase.from('schools').insert([s]); fetchData(); }} /> )}
-              {currentPath === 'master-plans' && ( <MasterPlans plans={state.plans} onUpdatePlanDefinition={async (pid, up) => { await supabase.from('plans').update({ name: up.name, price: up.price, student_limit: up.studentLimit, features: up.features }).eq('id', pid); fetchData(); }} /> )}
+              {currentPath === 'master-plans' && ( <MasterPlans plans={state.plans} onUpdatePlanDefinition={async (pid, up) => { await supabase.from('plans').update({ name: up.name, price: up.price, student_limit: up.student_limit, features: up.features }).eq('id', pid); fetchData(); }} /> )}
               {currentPath === 'master-finance' && <MasterFinance schools={state.schools} />}
               {currentPath === 'master-settings' && <MasterSettings featureFlags={state.featureFlags} onUpdateFlags={handleUpdateFeatureFlags} />}
               

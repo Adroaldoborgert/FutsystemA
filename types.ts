@@ -78,6 +78,9 @@ export interface Athlete {
   enrollmentDate: string;
   notes?: string;
   unit?: string;
+  studentCpf?: string;
+  parentCpf?: string;
+  parentAddress?: string;
 }
 
 export interface Transaction {
