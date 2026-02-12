@@ -26,6 +26,23 @@ const MONTHS = [
 ];
 
 const App: React.FC = () => {
+  // Lógica de detecção imediata de rota para evitar flickers/bloqueios
+  const getInitialRoute = () => {
+    const path = window.location.pathname;
+    if (path.startsWith('/matricular/')) {
+      return 'public-enrollment';
+    }
+    return 'login';
+  };
+
+  const getInitialSlug = () => {
+    const path = window.location.pathname;
+    if (path.startsWith('/matricular/')) {
+      return path.split('/')[2] || null;
+    }
+    return null;
+  };
+
   const [state, setState] = useState<AppState>({
     currentUser: null,
     schools: [],
@@ -46,7 +63,7 @@ const App: React.FC = () => {
     }
   });
 
-  const [currentPath, setCurrentPath] = useState<string>('login');
+  const [currentPath, setCurrentPath] = useState<string>(getInitialRoute());
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -55,21 +72,24 @@ const App: React.FC = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [publicEnrollmentSlug, setPublicEnrollmentSlug] = useState<string | null>(null);
+  const [publicEnrollmentSlug, setPublicEnrollmentSlug] = useState<string | null>(getInitialSlug());
 
   const logoUrl = "https://lh3.googleusercontent.com/d/1UT57Wn4oFAqPMfj-8_3tZ5HzXIgr-to2";
 
   useEffect(() => {
-    // Detecção de Rota Pública de Matrícula (Isolada)
-    const path = window.location.pathname;
-    if (path.startsWith('/matricular/')) {
-      const slug = path.split('/')[2];
-      if (slug) {
-        setPublicEnrollmentSlug(slug);
-        setCurrentPath('public-enrollment');
-        return;
+    // Sincroniza o estado caso o usuário use botões de voltar/avançar do navegador
+    const handleLocationChange = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/matricular/')) {
+        const slug = path.split('/')[2];
+        if (slug) {
+          setPublicEnrollmentSlug(slug);
+          setCurrentPath('public-enrollment');
+        }
       }
-    }
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) handleUserSession(session);
@@ -80,13 +100,17 @@ const App: React.FC = () => {
         handleUserSession(session);
       } else {
         setState(prev => ({ ...prev, currentUser: null }));
+        // Só redireciona para login se NÃO estiver em uma rota pública
         if (!window.location.pathname.startsWith('/matricular/')) {
             setCurrentPath('login');
         }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('popstate', handleLocationChange);
+    };
   }, []);
 
   const handleUserSession = async (session: any) => {
@@ -107,11 +131,14 @@ const App: React.FC = () => {
             schoolId: profile.school_id
           }
         }));
-        setCurrentPath(profile.role === UserRole.MASTER ? 'master-dashboard' : 'school-dashboard');
+        
+        // Se estivermos na rota de matrícula, NÃO redirecionamos para o dashboard
+        if (!window.location.pathname.startsWith('/matricular/')) {
+          setCurrentPath(profile.role === UserRole.MASTER ? 'master-dashboard' : 'school-dashboard');
+        }
       }
     } catch (err) {
       console.error("Erro ao carregar perfil:", err);
-      setError("Erro ao carregar seu perfil. Tente novamente.");
     } finally {
       setIsAuthLoading(false);
     }
@@ -148,16 +175,14 @@ const App: React.FC = () => {
           }
         });
         if (signUpErr) throw signUpErr;
-        alert("Cadastro realizado! Verifique seu e-mail para confirmar a conta.");
+        alert("Cadastro realizado! Verifique seu e-mail.");
         setIsSignUp(false);
       } else {
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
         if (signInErr) throw signInErr;
       }
     } catch (err: any) {
-      let errorMsg = err.message || "Erro na autenticação.";
-      if (errorMsg === "Invalid login credentials") errorMsg = "E-mail ou senha incorretos.";
-      setError(errorMsg);
+      setError(err.message || "Erro na autenticação.");
     } finally {
       setIsAuthLoading(false);
     }
@@ -413,14 +438,12 @@ const App: React.FC = () => {
   };
 
   useEffect(() => { 
-    if (state.currentUser) {
-      fetchData();
-    }
+    if (state.currentUser) fetchData();
   }, [state.currentUser?.role, state.currentUser?.schoolId, state.impersonatingSchoolId]);
 
   const currentSchool = state.schools.find(s => s.id === (state.impersonatingSchoolId || state.currentUser?.schoolId)) || (state.schools.length > 0 ? state.schools[0] : null);
 
-  // Renderização isolada para Rota Pública
+  // Renderização da Rota Pública - PRIORIDADE MÁXIMA
   if (currentPath === 'public-enrollment' && publicEnrollmentSlug) {
     return <PublicEnrollment slug={publicEnrollmentSlug} />;
   }
