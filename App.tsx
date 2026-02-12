@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UserRole, AppState, School, SchoolPlan, Athlete, Lead, PlanDefinition, SchoolConfig, Transaction, WhatsAppInstance } from './types';
-import { PLAN_DEFINITIONS } from './constants';
+import { PLAN_DEFINITIONS, MOCK_SCHOOLS, MOCK_ATHLETES, MOCK_LEADS } from './constants';
 import { supabase, isSupabaseConfigured } from './services/supabase';
+import { whatsappService } from './services/whatsappService';
 import Sidebar from './components/Sidebar';
 import MasterDashboard from './views/MasterDashboard';
 import MasterUnits from './views/MasterUnits';
@@ -16,27 +17,14 @@ import SchoolSettings from './views/SchoolSettings';
 import SchoolFinance from './views/SchoolFinance';
 import WhatsAppIntegration from './views/WhatsAppIntegration';
 import SchoolPlans from './views/SchoolPlans';
-import PublicEnrollment from './views/PublicEnrollment';
-import { Loader2, Mail, Lock, UserPlus, Building, ArrowRight, Menu, X } from 'lucide-react';
+import { Shield, Loader2, Mail, Lock, UserPlus, LogIn, Building, ArrowRight } from 'lucide-react';
+
+const MONTHS = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+];
 
 const App: React.FC = () => {
-  // Lógica de detecção de rota pública - Suporta caminhos limpos e fallback
-  const detectPublicRoute = () => {
-    const path = window.location.pathname;
-    const hash = window.location.hash;
-    
-    // Detecta /matricular/slug ou #/matricular/slug
-    if (path.startsWith('/matricular/')) {
-      return { path: 'public-enrollment', slug: path.split('/')[2] };
-    }
-    if (hash.startsWith('#/matricular/')) {
-      return { path: 'public-enrollment', slug: hash.split('/')[2] };
-    }
-    return { path: 'login', slug: null };
-  };
-
-  const initialRoute = detectPublicRoute();
-
   const [state, setState] = useState<AppState>({
     currentUser: null,
     schools: [],
@@ -47,11 +35,17 @@ const App: React.FC = () => {
     impersonatingSchoolId: null,
     schoolConfig: { categories: [], teams: [], monthlyPlans: [], units: [] },
     whatsappInstance: null,
-    featureFlags: { athletes: true, leads: true, finance: true, whatsapp: true, plans: true, settings: true }
+    featureFlags: {
+      athletes: true,
+      leads: true,
+      finance: true,
+      whatsapp: true,
+      plans: true,
+      settings: true
+    }
   });
 
-  const [currentPath, setCurrentPath] = useState<string>(initialRoute.path);
-  const [publicEnrollmentSlug, setPublicEnrollmentSlug] = useState<string | null>(initialRoute.slug);
+  const [currentPath, setCurrentPath] = useState<string>('login');
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -59,21 +53,12 @@ const App: React.FC = () => {
   const [schoolName, setSchoolName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const logoUrl = "https://lh3.googleusercontent.com/d/1UT57Wn4oFAqPMfj-8_3tZ5HzXIgr-to2";
 
+  const currentSchool = state.schools.find(s => s.id === (state.impersonatingSchoolId || state.currentUser?.schoolId)) || state.schools[0];
+
   useEffect(() => {
-    // Listener para mudanças de URL (botões voltar/avançar)
-    const handleLocationChange = () => {
-      const route = detectPublicRoute();
-      setCurrentPath(route.path);
-      setPublicEnrollmentSlug(route.slug);
-    };
-
-    window.addEventListener('popstate', handleLocationChange);
-    window.addEventListener('hashchange', handleLocationChange);
-
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) handleUserSession(session);
     });
@@ -83,18 +68,11 @@ const App: React.FC = () => {
         handleUserSession(session);
       } else {
         setState(prev => ({ ...prev, currentUser: null }));
-        const route = detectPublicRoute();
-        if (route.path !== 'public-enrollment') {
-          setCurrentPath('login');
-        }
+        setCurrentPath('login');
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-      window.removeEventListener('popstate', handleLocationChange);
-      window.removeEventListener('hashchange', handleLocationChange);
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleUserSession = async (session: any) => {
@@ -109,16 +87,17 @@ const App: React.FC = () => {
       if (profile) {
         setState(prev => ({
           ...prev,
-          currentUser: { id: session.user.id, role: profile.role as UserRole, schoolId: profile.school_id }
+          currentUser: {
+            id: session.user.id,
+            role: profile.role as UserRole,
+            schoolId: profile.school_id
+          }
         }));
-        
-        const route = detectPublicRoute();
-        if (route.path !== 'public-enrollment') {
-          setCurrentPath(profile.role === UserRole.MASTER ? 'master-dashboard' : 'school-dashboard');
-        }
+        setCurrentPath(profile.role === UserRole.MASTER ? 'master-dashboard' : 'school-dashboard');
       }
     } catch (err) {
       console.error("Erro ao carregar perfil:", err);
+      setError("Erro ao carregar seu perfil. Tente novamente.");
     } finally {
       setIsAuthLoading(false);
     }
@@ -128,25 +107,55 @@ const App: React.FC = () => {
     e.preventDefault();
     setError('');
     setIsAuthLoading(true);
+
     try {
       if (isSignUp) {
         const { data: school, error: schoolErr } = await supabase
           .from('schools')
-          .insert([{ name: schoolName, email: email, plan: SchoolPlan.FREE, status: 'active' }])
-          .select().single();
+          .insert([{ 
+            name: schoolName, 
+            email: email, 
+            plan: SchoolPlan.FREE, 
+            status: 'active' 
+          }])
+          .select()
+          .single();
+
         if (schoolErr) throw schoolErr;
+
         const { error: signUpErr } = await supabase.auth.signUp({
-          email, password, options: { data: { school_id: school.id, role: UserRole.SCHOOL_MANAGER } }
+          email,
+          password,
+          options: {
+            data: { 
+              school_id: school.id,
+              role: UserRole.SCHOOL_MANAGER 
+            }
+          }
         });
         if (signUpErr) throw signUpErr;
-        alert("Cadastro realizado! Verifique seu e-mail.");
+        alert("Cadastro realizado! Verifique seu e-mail para confirmar a conta.");
         setIsSignUp(false);
       } else {
         const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
         if (signInErr) throw signInErr;
       }
     } catch (err: any) {
-      setError(err.message || "Erro na autenticação.");
+      let errorMsg = err.message || "Erro na autenticação.";
+      
+      if (errorMsg === "Invalid login credentials") {
+        errorMsg = "E-mail ou senha incorretos.";
+      } else if (errorMsg.includes("Email not confirmed")) {
+        errorMsg = "E-mail não confirmado. Por favor, verifique sua caixa de entrada.";
+      } else if (errorMsg.includes("User already registered")) {
+        errorMsg = "Este e-mail já está cadastrado em nossa base.";
+      } else if (errorMsg.includes("Password should be at least 6 characters")) {
+        errorMsg = "A senha deve ter pelo menos 6 caracteres.";
+      } else if (errorMsg.includes("rate limit")) {
+        errorMsg = "Muitas tentativas. Por favor, aguarde um momento antes de tentar novamente.";
+      }
+
+      setError(errorMsg);
     } finally {
       setIsAuthLoading(false);
     }
@@ -165,6 +174,7 @@ const App: React.FC = () => {
 
     try {
       const { data: masterFlags } = await supabase.from('master_configs').select('feature_flags').eq('id', 1).maybeSingle();
+
       const [schoolsRes, plansRes] = await Promise.all([
         supabase.from('schools').select('*').order('name'),
         supabase.from('plans').select('*').order('price')
@@ -196,6 +206,7 @@ const App: React.FC = () => {
           supabase.from('school_monthly_plans').select('*').eq('school_id', activeSchoolId).order('name'),
           supabase.from('school_units').select('*').eq('school_id', activeSchoolId).order('name')
         ]);
+
         athletesData = athRes.data || [];
         leadsData = leadRes.data || [];
         transactionsData = transRes.data || [];
@@ -221,20 +232,74 @@ const App: React.FC = () => {
             createdAt: s.created_at,
             enrollmentFee: s.enrollment_fee || 0,
             uniformPrice: s.uniform_price || 0,
-            hasMultipleUnits: s.is_multi_unit || false,
-            slug: s.slug || s.id,
-            autoEnrollmentEnabled: s.auto_enrollment_enabled !== false,
-            welcomeMessage: s.welcome_message || ''
+            hasMultipleUnits: s.is_multi_unit || false
           };
         }),
-        athletes: athletesData.map(a => ({ ...a, name: a.name, registrationOrigin: a.registration_origin || 'manual' })),
-        leads: (leadsData || []).map(l => ({ ...l, id: l.id })),
-        transactions: (transactionsData || []).map(t => ({ ...t, id: t.id })),
+        athletes: athletesData.map(a => ({
+          id: a.id,
+          name: a.name,
+          parentName: a.parent_name,
+          parentPhone: a.parent_phone,
+          birthDate: a.birth_date,
+          category: a.category,
+          team: a.team,
+          plan: a.plan,
+          hasUniform: a.has_uniform,
+          status: a.status,
+          paymentStatus: a.payment_status || 'pending',
+          lastPayment: a.last_payment || '',
+          enrollmentDate: a.enrollment_date,
+          notes: a.notes || '',
+          unit: a.unit || '',
+          studentCpf: a.student_cpf || '',
+          parentCpf: a.parent_cpf || '',
+          parentAddress: a.parent_address || ''
+        })),
+        leads: (leadsData || []).map(l => ({
+          id: l.id,
+          name: l.name,
+          parentName: l.parent_name || '',
+          phone: l.phone || '',
+          birthDate: l.age || '',
+          trialDate: l.trial_date || '',
+          trialTime: l.trial_time || '',
+          origin: l.origin || 'Outros',
+          categoryInterest: l.category_interest || '',
+          status: l.status || 'new',
+          notes: l.notes || '',
+          reminderSent: l.reminder_sent || false,
+          unit: l.unit || ''
+        })),
+        transactions: (transactionsData || []).map(t => ({
+          id: t.id,
+          athleteId: t.athlete_id,
+          athleteName: t.athlete_name,
+          amount: Number(t.amount),
+          status: t.status,
+          dueDate: t.due_date,
+          competenceDate: t.competence_date || '',
+          description: t.description || '',
+          paymentDate: t.payment_date,
+          reminderSent: false
+        })),
         schoolConfig: {
           categories: categories.map(c => ({ id: c.id, name: c.name })),
           units: units.map(u => ({ id: u.id, name: u.name, isActive: u.is_active !== false })),
-          teams: teams.map(t => ({ ...t, id: t.id })),
-          monthlyPlans: monthlyPlans.map(mp => ({ ...mp, id: mp.id }))
+          teams: teams.map(t => ({ 
+            id: t.id, 
+            name: t.name, 
+            schedule: t.schedule, 
+            category: t.category, 
+            unit: t.unit,
+            maxStudents: t.max_students, 
+            active: t.active 
+          })),
+          monthlyPlans: monthlyPlans.map(mp => ({ 
+            id: mp.id, 
+            name: mp.name, 
+            price: Number(mp.price),
+            dueDay: mp.dueDay || 10
+          }))
         }
       }));
     } catch (err) {
@@ -244,14 +309,256 @@ const App: React.FC = () => {
     }
   };
 
-  useEffect(() => { if (state.currentUser) fetchData(); }, [state.currentUser?.role, state.currentUser?.schoolId, state.impersonatingSchoolId]);
+  const handleUpdateFeatureFlags = async (flags: any) => {
+    try {
+      const { error } = await supabase.from('master_configs').update({ feature_flags: flags }).eq('id', 1);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao atualizar feature flags:", err);
+    }
+  };
 
-  const currentSchool = state.schools.find(s => s.id === (state.impersonatingSchoolId || state.currentUser?.schoolId)) || (state.schools.length > 0 ? state.schools[0] : null);
+  const handleAddAthlete = async (athlete: Partial<Athlete>) => {
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId) return;
+    try {
+      const { error } = await supabase.from('athletes').insert([{
+        school_id: schoolId,
+        name: athlete.name,
+        parent_name: athlete.parentName,
+        parent_phone: athlete.parentPhone,
+        birth_date: athlete.birthDate || null,
+        category: athlete.category,
+        team: athlete.team,
+        plan: athlete.plan,
+        has_uniform: athlete.hasUniform,
+        status: athlete.status || 'active',
+        enrollment_date: athlete.enrollmentDate || new Date().toISOString().split('T')[0],
+        notes: athlete.notes,
+        unit: athlete.unit,
+        student_cpf: athlete.studentCpf,
+        parent_cpf: athlete.parentCpf,
+        parent_address: athlete.parentAddress
+      }]);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao adicionar atleta:", err);
+    }
+  };
 
-  // PRIORIDADE MÁXIMA: Rota de Auto-Matrícula
-  if (currentPath === 'public-enrollment' && publicEnrollmentSlug) {
-    return <PublicEnrollment slug={publicEnrollmentSlug} />;
-  }
+  const handleUpdateAthlete = async (id: string, updates: Partial<Athlete>) => {
+    try {
+      const { error } = await supabase.from('athletes').update({
+        name: updates.name,
+        parent_name: updates.parentName,
+        parent_phone: updates.parentPhone,
+        birth_date: updates.birthDate || null,
+        category: updates.category,
+        team: updates.team,
+        plan: updates.plan,
+        has_uniform: updates.hasUniform,
+        status: updates.status,
+        enrollment_date: updates.enrollmentDate,
+        notes: updates.notes,
+        unit: updates.unit,
+        student_cpf: updates.studentCpf,
+        parent_cpf: updates.parentCpf,
+        parent_address: updates.parentAddress
+      }).eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao atualizar atleta:", err);
+    }
+  };
+
+  const handleUpdateLeadStatus = async (id: string, status: Lead['status']) => {
+    try {
+      const { error } = await supabase.from('leads').update({ status }).eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao atualizar status do lead:", err);
+    }
+  };
+
+  const handleAddLead = async (lead: Partial<Lead>) => {
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId) return;
+    try {
+      const { error } = await supabase.from('leads').insert([{
+        school_id: schoolId,
+        name: lead.name,
+        parent_name: lead.parentName,
+        phone: lead.phone,
+        age: lead.birthDate === '' ? null : lead.birthDate,
+        trial_date: lead.trialDate === '' ? null : lead.trialDate,
+        trial_time: lead.trialTime === '' ? null : lead.trialTime,
+        origin: lead.origin,
+        category_interest: lead.categoryInterest,
+        status: lead.status || 'new',
+        notes: lead.notes,
+        unit: lead.unit
+      }]);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao adicionar lead:", err);
+    }
+  };
+
+  const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>) => {
+    try {
+      const { error } = await supabase.from('transactions').update({
+        status: updates.status,
+        amount: updates.amount,
+        due_date: updates.dueDate,
+        payment_date: updates.paymentDate === '' ? null : updates.paymentDate,
+        competence_date: updates.competenceDate,
+        description: updates.description
+      }).eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao atualizar transação:", err);
+    }
+  };
+
+  const handleAddTransaction = async (trans: Partial<Transaction>) => {
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId) return;
+    try {
+      const { error } = await supabase.from('transactions').insert([{
+        school_id: schoolId,
+        athlete_id: trans.athleteId,
+        athlete_name: trans.athleteName,
+        amount: trans.amount,
+        status: trans.status || 'pending',
+        due_date: trans.dueDate,
+        competence_date: trans.competenceDate,
+        description: trans.description,
+        payment_date: trans.paymentDate === '' ? null : trans.paymentDate
+      }]);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      console.error("Erro ao adicionar transação:", err);
+    }
+  };
+
+  const handleGenerateBulk = async (month: string, year: string, dueDay: number) => {
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId) return;
+    
+    const activeAthletes = state.athletes.filter(a => a.status === 'active');
+    const competence = `${month}/${year}`;
+    
+    const monthIndex = MONTHS.indexOf(month.toLowerCase());
+    const dueDate = `${year}-${(monthIndex + 1).toString().padStart(2, '0')}-${dueDay.toString().padStart(2, '0')}`;
+    
+    const newTransactions = activeAthletes.map(athlete => {
+        const plan = state.schoolConfig?.monthlyPlans.find(p => p.name === athlete.plan);
+        const amount = plan ? plan.price : 0;
+        
+        return {
+            school_id: schoolId,
+            athlete_id: athlete.id,
+            athlete_name: athlete.name,
+            amount: amount,
+            status: 'pending',
+            due_date: dueDate,
+            competence_date: competence,
+            description: 'Mensalidade'
+        };
+    });
+
+    if (newTransactions.length === 0) {
+        alert("Nenhum atleta ativo encontrado para gerar cobranças.");
+        return;
+    }
+
+    try {
+        const { error } = await supabase.from('transactions').insert(newTransactions);
+        if (error) throw error;
+        alert(`${newTransactions.length} mensalidades geradas com sucesso!`);
+        fetchData();
+    } catch (err) {
+        console.error("Erro ao gerar mensalidades em massa:", err);
+        alert("Erro ao gerar mensalidades.");
+    }
+  };
+
+  const handleAutoTrialReminders = async () => {
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId || !state.whatsappInstance || state.whatsappInstance.status !== 'connected') return;
+
+    const { data: config } = await supabase.from('whatsapp_configs').select('notification_rules').eq('school_id', schoolId).single();
+    if (!config?.notification_rules?.trialReminder) return;
+
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    const leadsToNotify = state.leads.filter(l => 
+      l.status === 'trial_scheduled' && 
+      l.trialDate === tomorrowStr && 
+      !l.reminderSent
+    );
+
+    if (leadsToNotify.length > 0) {
+      await handleNotifyWhatsApp('trial', leadsToNotify);
+      for (const lead of leadsToNotify) {
+        await supabase.from('leads').update({ reminder_sent: true }).eq('id', lead.id);
+      }
+      fetchData(); 
+    }
+  };
+
+  useEffect(() => { 
+    if (state.currentUser) {
+      fetchData().then(() => {
+         handleAutoTrialReminders();
+      });
+    }
+  }, [state.currentUser?.role, state.currentUser?.schoolId, state.impersonatingSchoolId, state.whatsappInstance?.status]);
+
+  const handleNotifyWhatsApp = async (type: 'overdue' | 'expiry5days' | 'trial', targets: any[]) => {
+    const schoolId = state.impersonatingSchoolId || state.currentUser?.schoolId;
+    if (!schoolId) return;
+
+    const instanceName = `school_${schoolId}`;
+    const { data: config } = await supabase.from('whatsapp_configs').select('message_templates').eq('school_id', schoolId).single();
+    const template = config?.message_templates?.[type];
+
+    if (!template) {
+      alert("Template de mensagem não configurado na aba WhatsApp.");
+      return;
+    }
+
+    for (const target of targets) {
+      let message = template;
+      if (type === 'trial') {
+        message = message.replace('{lead_name}', target.name).replace('{trial_date}', new Date(target.trialDate).toLocaleDateString('pt-BR')).replace('{trial_time}', target.trialTime || '');
+      } else {
+        const athlete = state.athletes.find(a => a.id === target.athleteId);
+        message = message.replace('{athlete_name}', target.athleteName)
+                         .replace('{parent_name}', athlete?.parentName || 'Responsável')
+                         .replace('{due_date}', new Date(target.dueDate).toLocaleDateString('pt-BR'))
+                         .replace('{amount}', target.amount.toFixed(2))
+                         .replace('{competence}', target.competenceDate);
+      }
+      
+      const phone = type === 'trial' ? target.phone : state.athletes.find(a => a.id === target.athleteId)?.parentPhone;
+      if (phone) {
+        await whatsappService.sendText(instanceName, phone, message);
+      }
+    }
+    if (type !== 'trial' || targets.length > 1) {
+        alert(`Disparos de ${type} concluídos para ${targets.length} contatos.`);
+    }
+  };
 
   if (currentPath === 'login') {
     return (
@@ -260,15 +567,24 @@ const App: React.FC = () => {
           <div className="mb-8 flex justify-center">
             <img src={logoUrl} alt="FutSystem Logo" className="w-20 h-20 object-contain" />
           </div>
+          
           <h1 className="text-[2.2rem] font-black leading-tight text-brand-purple italic uppercase tracking-tighter mb-1">FUTSYSTEM</h1>
-          <p className="text-slate-400 mb-10 font-black uppercase tracking-widest text-[10px]">Gestão Esportiva Profissional</p>
+          <p className="text-slate-400 mb-10 font-black uppercase tracking-widest text-[10px]">Gestão Esportiva Professional</p>
+          
           <form onSubmit={handleAuthSubmit} className="space-y-5 w-full text-left">
             {isSignUp && (
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Unidade</label>
                 <div className="relative">
                   <Building size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input type="text" placeholder="Ex: Arena Fut Academy" required className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold transition-all text-sm" value={schoolName} onChange={(e) => setSchoolName(e.target.value)} />
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Arena Fut Academy" 
+                    required
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold transition-all text-sm"
+                    value={schoolName}
+                    onChange={(e) => setSchoolName(e.target.value)}
+                  />
                 </div>
               </div>
             )}
@@ -276,23 +592,46 @@ const App: React.FC = () => {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Acesso</label>
               <div className="relative">
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input type="email" placeholder="admin@futsystem.com" required className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold transition-all text-sm" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <input 
+                  type="email" 
+                  placeholder="admin@futsystem.com" 
+                  required
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold transition-all text-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Senha</label>
               <div className="relative">
                 <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input type="password" placeholder="••••••••" required className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold transition-all text-sm" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  required
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold transition-all text-sm"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
             </div>
             {error && <p className="text-red-500 text-[10px] font-bold uppercase italic text-center py-1">{error}</p>}
-            <button type="submit" disabled={isAuthLoading} className="w-full py-4 bg-brand-purple text-white font-black rounded-2xl hover:opacity-90 transition-all transform active:scale-95 shadow-xl shadow-brand-purple/10 flex items-center justify-center gap-3 uppercase tracking-widest italic text-xs mt-4">
+            
+            <button 
+              type="submit" 
+              disabled={isAuthLoading}
+              className="w-full py-4 bg-brand-purple text-white font-black rounded-2xl hover:opacity-90 transition-all transform active:scale-95 shadow-xl shadow-brand-purple/10 flex items-center justify-center gap-3 uppercase tracking-widest italic text-xs mt-4"
+            >
               {isAuthLoading ? <Loader2 className="animate-spin" /> : (isSignUp ? <UserPlus size={18} /> : <ArrowRight size={18} />)}
               {isSignUp ? 'Cadastrar Unidade' : 'Acessar FutSystem'}
             </button>
           </form>
-          <button onClick={() => setIsSignUp(!isSignUp)} className="mt-10 text-brand-purple text-[10px] font-black uppercase tracking-widest hover:underline italic">
+
+          <button 
+            onClick={() => setIsSignUp(!isSignUp)}
+            className="mt-10 text-brand-purple text-[10px] font-black uppercase tracking-widest hover:underline italic"
+          >
             {isSignUp ? 'Já tenho uma conta? Entrar' : 'Novo por aqui? Cadastre sua escola'}
           </button>
         </div>
@@ -300,33 +639,108 @@ const App: React.FC = () => {
     );
   }
 
+  const isSchoolView = !currentPath.startsWith('master-');
+  const isDataMissing = isSchoolView && !currentSchool && state.currentUser?.role === UserRole.SCHOOL_MANAGER;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      <Sidebar role={state.currentUser?.role || UserRole.SCHOOL_MANAGER} currentPath={currentPath} onNavigate={(path) => { setCurrentPath(path); setIsSidebarOpen(false); }} onLogout={handleLogout} featureFlags={state.featureFlags} isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-100 sticky top-0 z-30">
-        <div className="flex items-center gap-2">
-           <img src={logoUrl} alt="Logo" className="w-8 h-8 object-contain" />
-           <span className="font-black text-brand-purple uppercase italic text-sm">FutSystem</span>
-        </div>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 text-slate-600 hover:bg-slate-50 rounded-lg">
-          {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-      <main className={`md:ml-64 p-4 md:p-8 relative min-h-screen transition-all duration-300 ${isSidebarOpen ? 'blur-sm md:blur-none pointer-events-none md:pointer-events-auto' : ''}`}>
+      <Sidebar 
+        role={state.currentUser?.role || UserRole.SCHOOL_MANAGER} 
+        currentPath={currentPath} 
+        onNavigate={setCurrentPath} 
+        onLogout={handleLogout} 
+        featureFlags={state.featureFlags}
+      />
+      <main className="ml-64 p-8 relative min-h-screen">
+        {(isLoading || isAuthLoading) && ( 
+          <div className="fixed top-4 right-8 flex items-center gap-2 text-brand-purple font-bold bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-xl z-[100] border border-brand-purple/10"> 
+            <Loader2 size={18} className="animate-spin" /> {isAuthLoading ? 'Autenticando...' : 'Sincronizando...'} 
+          </div> 
+        )}
+        
         <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-           {isLoading && <div className="flex items-center justify-center py-20"><Loader2 className="animate-spin text-brand-purple" size={40} /></div>}
-           {!isLoading && currentPath === 'master-dashboard' && <MasterDashboard schools={state.schools} />}
-           {!isLoading && currentPath === 'master-units' && ( <MasterUnits schools={state.schools} plans={state.plans} onImpersonate={(id) => { setState(prev => ({ ...prev, impersonatingSchoolId: id })); setCurrentPath('school-dashboard'); }} onUpdatePlan={async (sid, p) => { await supabase.from('schools').update({ plan: p }).eq('id', sid); fetchData(); }} onResetCredentials={() => {}} onAddSchool={async (s) => { await supabase.from('schools').insert([s]); fetchData(); }} onDeleteSchool={async (id) => { await supabase.from('schools').delete().eq('id', id); fetchData(); }} /> )}
-           {!isLoading && currentPath === 'school-dashboard' && currentSchool && <SchoolDashboardV2 athletes={state.athletes} leads={state.leads} transactions={state.transactions} school={currentSchool} onNavigate={setCurrentPath} />}
-           {!isLoading && currentPath === 'athletes' && currentSchool && <Athletes athletes={state.athletes} config={state.schoolConfig!} school={currentSchool} onAddAthlete={() => fetchData()} onUpdateAthlete={() => fetchData()} onDeleteAthlete={() => fetchData()} />}
-           {!isLoading && currentPath === 'leads' && currentSchool && <CRMLeads leads={state.leads} config={state.schoolConfig!} school={currentSchool} onUpdateStatus={() => fetchData()} onAddLead={() => fetchData()} onUpdateLead={() => fetchData()} onDeleteLead={() => fetchData()} onEnrollLead={() => fetchData()} />}
-           {!isLoading && currentPath === 'settings' && currentSchool && <SchoolSettings school={currentSchool} config={state.schoolConfig!} onUpdateSettings={async (up) => { const sid = currentSchool.id; await supabase.from('schools').update({ name: up.name, manager_name: up.managerName, email: up.email, enrollment_fee: up.enrollmentFee, uniform_price: up.uniformPrice, is_multi_unit: up.hasMultipleUnits, slug: up.slug, auto_enrollment_enabled: up.autoEnrollmentEnabled, welcome_message: up.welcomeMessage }).eq('id', sid); fetchData(); }} onRefresh={fetchData} />}
-           {!isLoading && currentPath === 'finance' && currentSchool && <SchoolFinance transactions={state.transactions} athletes={state.athletes} school={currentSchool} onUpdateTransaction={() => fetchData()} onDeleteTransaction={() => fetchData()} onAddTransaction={() => fetchData()} />}
-           {!isLoading && currentPath === 'school-plans' && currentSchool && <SchoolPlans school={currentSchool} plans={state.plans} onUpgrade={async (p) => { await supabase.from('schools').update({ plan: p }).eq('id', currentSchool.id); fetchData(); }} />}
-           {!isLoading && currentPath === 'whatsapp' && currentSchool && <WhatsAppIntegration schoolId={currentSchool.id} school={currentSchool} onNavigate={setCurrentPath} />}
+          {isDataMissing ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+              <Loader2 size={48} className="animate-spin mb-4" />
+              <p className="font-bold uppercase italic tracking-widest text-xs text-brand-purple">Acessando dados FutSystem...</p>
+            </div>
+          ) : (
+            <>
+              {currentPath === 'master-dashboard' && <MasterDashboard schools={state.schools} />}
+              {currentPath === 'master-units' && ( <MasterUnits schools={state.schools} plans={state.plans} onImpersonate={(id) => { setState(prev => ({ ...prev, impersonatingSchoolId: id })); setCurrentPath('school-dashboard'); }} onUpdatePlan={async (sid, p) => { await supabase.from('schools').update({ plan: p }).eq('id', sid); fetchData(); }} onResetCredentials={() => {}} onAddSchool={async (s) => { await supabase.from('schools').insert([s]); fetchData(); }} onDeleteSchool={async (id) => { 
+                const { error } = await supabase.from('schools').delete().eq('id', id); 
+                if (error) {
+                    alert("Erro ao excluir do banco de dados: " + error.message);
+                } else {
+                    fetchData();
+                }
+              }} /> )}
+              {currentPath === 'master-plans' && ( <MasterPlans plans={state.plans} onUpdatePlanDefinition={async (pid, up) => { await supabase.from('plans').update({ name: up.name, price: up.price, student_limit: up.studentLimit, features: up.features }).eq('id', pid); fetchData(); }} /> )}
+              {currentPath === 'master-finance' && <MasterFinance schools={state.schools} />}
+              {currentPath === 'master-settings' && <MasterSettings featureFlags={state.featureFlags} onUpdateFlags={handleUpdateFeatureFlags} />}
+              
+              {currentPath === 'school-dashboard' && currentSchool && (
+                <SchoolDashboardV2 
+                  athletes={state.athletes} 
+                  leads={state.leads} 
+                  transactions={state.transactions}
+                  school={currentSchool} 
+                  onNavigate={setCurrentPath}
+                />
+              )}
+              {currentPath === 'athletes' && currentSchool && <Athletes athletes={state.athletes} config={state.schoolConfig!} school={currentSchool} onAddAthlete={handleAddAthlete} onUpdateAthlete={handleUpdateAthlete} onDeleteAthlete={async (id) => { await supabase.from('athletes').delete().eq('id', id); fetchData(); }} />}
+              {currentPath === 'leads' && <CRMLeads leads={state.leads} config={state.schoolConfig!} school={currentSchool} whatsappConnected={!!state.whatsappInstance} onUpdateStatus={handleUpdateLeadStatus} onAddLead={handleAddLead} onUpdateLead={async (id, up) => { 
+                await supabase.from('leads').update({
+                  name: up.name,
+                  parent_name: up.parentName,
+                  phone: up.phone,
+                  age: up.birthDate === '' ? null : up.birthDate,
+                  trial_date: up.trialDate === '' ? null : up.trialDate,
+                  trial_time: up.trialTime === '' ? null : up.trialTime,
+                  origin: up.origin,
+                  category_interest: up.categoryInterest,
+                  status: up.status,
+                  notes: up.notes,
+                  unit: up.unit
+                }).eq('id', id); 
+                fetchData(); 
+              }} onDeleteLead={async (id) => { await supabase.from('leads').delete().eq('id', id); fetchData(); }} onEnrollLead={async (l) => { 
+                await supabase.from('leads').update({ status: 'converted' }).eq('id', l.id); 
+                const athleteData: Partial<Athlete> = {
+                  name: l.name,
+                  parentName: l.parentName || '',
+                  parentPhone: l.phone || '',
+                  birthDate: l.birthDate || '',
+                  category: l.categoryInterest,
+                  status: 'active',
+                  enrollmentDate: new Date().toISOString().split('T')[0],
+                  unit: l.unit
+                };
+                handleAddAthlete(athleteData); 
+              }} onNotifyLead={(lead) => handleNotifyWhatsApp('trial', [lead])} />}
+              {currentPath === 'finance' && <SchoolFinance transactions={state.transactions} athletes={state.athletes} school={currentSchool} whatsappConnected={!!state.whatsappInstance} onUpdateTransaction={handleUpdateTransaction} onDeleteTransaction={async (id) => { await supabase.from('transactions').delete().eq('id', id); fetchData(); }} onAddTransaction={handleAddTransaction} onGenerateBulk={handleGenerateBulk} onNotifyBulk={(targets) => handleNotifyWhatsApp('overdue', targets)} onNotifyUpcoming={(targets) => handleNotifyWhatsApp('expiry5days', targets)} />}
+              {currentPath === 'whatsapp' && currentSchool && <WhatsAppIntegration schoolId={state.currentUser?.schoolId || '1'} school={currentSchool} onStatusChange={(s) => setState(prev => ({...prev, whatsappInstance: s}))} onNavigate={setCurrentPath} />}
+              {currentPath === 'school-plans' && currentSchool && <SchoolPlans school={currentSchool} plans={state.plans} onUpgrade={async (p) => { await supabase.from('schools').update({ plan: p }).eq('id', state.currentUser?.schoolId); fetchData(); }} />}
+              {currentPath === 'settings' && currentSchool && <SchoolSettings school={currentSchool} config={state.schoolConfig!} onUpdateSettings={async (up) => { 
+                const sid = state.impersonatingSchoolId || state.currentUser?.schoolId; 
+                if(sid) {
+                  const dbUpdates: any = {};
+                  if (up.name !== undefined) dbUpdates.name = up.name;
+                  if (up.managerName !== undefined) dbUpdates.manager_name = up.managerName;
+                  if (up.email !== undefined) dbUpdates.email = up.email;
+                  if (up.enrollmentFee !== undefined) dbUpdates.enrollment_fee = up.enrollmentFee;
+                  if (up.uniformPrice !== undefined) dbUpdates.uniform_price = up.uniformPrice;
+                  if (up.hasMultipleUnits !== undefined) dbUpdates.is_multi_unit = up.hasMultipleUnits;
+                  if (Object.keys(dbUpdates).length > 0) {
+                    await supabase.from('schools').update(dbUpdates).eq('id', sid);
+                  }
+                }
+                fetchData(); 
+              }} onRefresh={fetchData} />}
+            </>
+          )}
         </div>
       </main>
-      {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-30 md:hidden" onClick={() => setIsSidebarOpen(false)} />}
     </div>
   );
 };

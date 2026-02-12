@@ -157,8 +157,8 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
   const paginatedAthletes = filteredAthletes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div className="max-w-7xl mx-auto animate-in fade-in duration-500 pb-0 space-y-0">
-      <div className="flex justify-between items-end mb-6">
+    <div className="space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500 pb-10">
+      <div className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-bold text-slate-800 tracking-tight italic uppercase">Gestão de Atletas</h2>
           <p className="text-slate-500 mt-1 font-medium italic">Base completa e análise de crescimento</p>
@@ -174,7 +174,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
       </div>
 
       {isLimitReached && (
-        <div className="bg-red-50 border-2 border-red-200 p-6 rounded-[2rem] flex items-center gap-5 text-red-700 animate-in slide-in-from-top-4 shadow-sm mb-6">
+        <div className="bg-red-50 border-2 border-red-200 p-6 rounded-[2rem] flex items-center gap-5 text-red-700 animate-in slide-in-from-top-4 shadow-sm">
             <div className="bg-red-600 text-white p-3 rounded-2xl shadow-lg">
                 <AlertTriangle size={24} />
             </div>
@@ -192,7 +192,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
       )}
 
       {/* Mini Dashboard de Atletas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center">
               <Users size={20} className="text-indigo-400 mb-2" />
@@ -227,6 +227,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats.evolution}>
                 <defs>
+                  {/* Fix: Line 231: Corrected double 'x2' to 'y1' and 'x2' */}
                   <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
                     <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
@@ -246,7 +247,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-4 flex-wrap mb-6">
+      <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex items-center gap-4 flex-wrap">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <input 
@@ -290,7 +291,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
         </div>
       </div>
       
-      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mb-6">
+      <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50/50 border-b border-slate-100">
@@ -380,6 +381,7 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
         {totalPages > 1 && (
           <div className="px-8 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
             <span className="text-xs text-slate-500 font-medium italic">
+              {/* Fix: Line 384: Corrected 'filteredLeads' to 'filteredAthletes' */}
               Exibindo {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAthletes.length)} de {filteredAthletes.length} atletas
             </span>
             <div className="flex items-center gap-1">
@@ -420,82 +422,82 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-[2px]">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-[1100px] overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-            <div className="px-8 py-4 flex justify-between items-center bg-white border-b border-slate-100 shrink-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-[2px] p-2 sm:p-4">
+          <div className="bg-white rounded-[1.5rem] shadow-2xl w-full max-w-[950px] overflow-hidden border border-white/20 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+            <div className="px-6 py-4 flex justify-between items-center bg-slate-50/50 shrink-0 border-b border-slate-100">
               <div>
-                <h3 className="text-xl font-black text-slate-800 italic uppercase tracking-tighter leading-tight">{editingAthlete ? 'Editar Cadastro' : 'Nova Matrícula'}</h3>
-                <p className="text-[10px] text-slate-400 font-bold italic uppercase tracking-wider">Unidade: {school.name}</p>
+                <h3 className="text-lg font-black text-slate-800 italic uppercase tracking-tighter leading-tight">{editingAthlete ? 'Editar Cadastro' : 'Nova Matrícula'}</h3>
+                <p className="text-[9px] text-slate-400 font-bold italic uppercase tracking-wider">Unidade: {school.name}</p>
               </div>
-              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 transition-colors p-2 hover:bg-slate-50 rounded-full"><X size={20} /></button>
+              <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 transition-colors p-1.5 hover:bg-white rounded-full"><X size={18} /></button>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-8 space-y-4 overflow-y-auto scrollbar-hide">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto scrollbar-hide">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Nome do Aluno *</label>
-                  <input required type="text" placeholder="Nome completo" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all font-bold italic text-sm" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Nome do Aluno *</label>
+                  <input required type="text" placeholder="Nome completo" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 transition-all font-bold italic text-xs" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">CPF do Aluno</label>
-                  <input type="text" placeholder="000.000.000-00" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.studentCpf} onChange={e => setFormData({...formData, studentCpf: e.target.value})} />
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">CPF do Aluno</label>
+                  <input type="text" placeholder="000.000.000-00" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-xs" value={formData.studentCpf} onChange={e => setFormData({...formData, studentCpf: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Data de Nascimento</label>
-                  <input type="date" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 text-slate-600 font-bold text-sm" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} />
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Data de Nascimento</label>
+                  <input type="date" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 text-slate-600 font-bold text-xs" value={formData.birthDate} onChange={e => setFormData({...formData, birthDate: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Responsável</label>
-                  <input type="text" placeholder="Nome do pai ou mãe" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentName} onChange={e => setFormData({...formData, parentName: e.target.value})} />
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Responsável</label>
+                  <input type="text" placeholder="Nome do pai ou mãe" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-xs" value={formData.parentName} onChange={e => setFormData({...formData, parentName: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">CPF do Responsável</label>
-                  <input type="text" placeholder="000.000.000-00" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentCpf} onChange={e => setFormData({...formData, parentCpf: e.target.value})} />
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">CPF do Responsável</label>
+                  <input type="text" placeholder="000.000.000-00" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-xs" value={formData.parentCpf} onChange={e => setFormData({...formData, parentCpf: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">WhatsApp Responsável *</label>
-                  <input required type="text" placeholder="(00) 00000-0000" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 font-bold text-sm" value={formData.parentPhone} onChange={e => setFormData({...formData, parentPhone: e.target.value})} />
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">WhatsApp Responsável *</label>
+                  <input required type="text" placeholder="(00) 00000-0000" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 font-bold text-xs" value={formData.parentPhone} onChange={e => setFormData({...formData, parentPhone: e.target.value})} />
                 </div>
 
                 <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Endereço do Responsável</label>
-                  <input type="text" placeholder="Rua, número, bairro..." className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-sm" value={formData.parentAddress} onChange={e => setFormData({...formData, parentAddress: e.target.value})} />
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Endereço do Responsável</label>
+                  <input type="text" placeholder="Rua, número, bairro..." className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 font-medium text-xs" value={formData.parentAddress} onChange={e => setFormData({...formData, parentAddress: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Categoria</label>
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Categoria</label>
                   <div className="relative">
-                    <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
+                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none appearance-none text-slate-600 font-bold italic text-xs" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
                       <option value="">Selecione...</option>
                       {config.categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Turma</label>
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Turma</label>
                   <div className="relative">
-                    <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.team} onChange={e => setFormData({...formData, team: e.target.value})}>
+                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none appearance-none text-slate-600 font-bold italic text-xs" value={formData.team} onChange={e => setFormData({...formData, team: e.target.value})}>
                       <option value="">Selecione...</option>
                       {config.teams.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
                     </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
 
                 {school.hasMultipleUnits && (
                   <div className="space-y-1">
-                    <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Unidade *</label>
+                    <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Unidade *</label>
                     <div className="relative">
                       <select 
                         required 
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none appearance-none font-bold italic text-sm" 
+                        className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none appearance-none font-bold italic text-xs" 
                         value={formData.unit} 
                         onChange={e => setFormData({...formData, unit: e.target.value})}
                       >
@@ -504,61 +506,61 @@ const Athletes: React.FC<AthletesProps> = ({ athletes, config, school, onAddAthl
                           <option key={u.id} value={u.name}>{u.name}</option>
                         ))}
                       </select>
-                      <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
                   </div>
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Plano Financeiro</label>
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Plano Financeiro</label>
                   <div className="relative">
-                    <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.plan} onChange={e => setFormData({...formData, plan: e.target.value})}>
+                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none appearance-none text-slate-600 font-bold italic text-xs" value={formData.plan} onChange={e => setFormData({...formData, plan: e.target.value})}>
                       <option value="">Selecione...</option>
                       {config.monthlyPlans.map(p => <option key={p.id} value={p.name}>{p.name} - R$ {p.price}</option>)}
                     </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Data de Início *</label>
-                  <input required type="date" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 text-slate-600 font-bold text-sm" value={formData.enrollmentDate} onChange={e => setFormData({...formData, enrollmentDate: e.target.value})} />
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Data de Início *</label>
+                  <input required type="date" className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500/10 text-slate-600 font-bold text-xs" value={formData.enrollmentDate} onChange={e => setFormData({...formData, enrollmentDate: e.target.value})} />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Status do Atleta</label>
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Status do Atleta</label>
                   <div className="relative">
-                    <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none appearance-none text-slate-600 font-bold italic text-sm" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as 'active' | 'inactive'})}>
+                    <select className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg outline-none appearance-none text-slate-600 font-bold italic text-xs" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as 'active' | 'inactive'})}>
                       <option value="active">Ativo</option>
                       <option value="inactive">Inativo</option>
                     </select>
-                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
 
                 <div className="space-y-1 flex flex-col justify-end">
-                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Uniforme Entregue?</label>
-                  <div className="flex items-center gap-2 h-[42px]">
+                  <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest italic">Uniforme Entregue?</label>
+                  <div className="flex items-center gap-2 h-[34px]">
                     <button 
                       type="button"
                       onClick={() => setFormData({...formData, hasUniform: !formData.hasUniform})}
-                      className={`w-11 h-6 flex items-center p-1 cursor-pointer transition-all duration-300 ease-in-out rounded-full ${
+                      className={`w-9 h-5 flex items-center p-0.5 cursor-pointer transition-all duration-300 ease-in-out rounded-full ${
                         formData.hasUniform ? 'bg-emerald-600' : 'bg-slate-300'
                       }`}
                     >
                       <div 
                         className={`w-4 h-4 bg-white shadow-sm transition-all duration-300 ease-in-out transform rounded-full ${
-                          formData.hasUniform ? 'translate-x-5' : 'translate-x-0'
+                          formData.hasUniform ? 'translate-x-4' : 'translate-x-0'
                         }`} 
                       />
                     </button>
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">{formData.hasUniform ? 'Sim' : 'Não'}</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">{formData.hasUniform ? 'Sim' : 'Não'}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-4 shrink-0">
-                <button type="submit" className="w-full py-4 bg-indigo-600 text-white font-black rounded-[1.5rem] hover:bg-indigo-700 transition-all shadow-none italic uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 text-xs">
+              <div className="pt-2 shrink-0">
+                <button type="submit" className="w-full py-3.5 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-50 italic uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 text-[10px]">
                   {editingAthlete ? 'Atualizar Dados' : 'Efetivar Matrícula'}
                 </button>
               </div>
