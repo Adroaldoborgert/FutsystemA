@@ -34,6 +34,9 @@ export interface School {
   enrollmentFee?: number;
   uniformPrice?: number;
   hasMultipleUnits?: boolean;
+  slug?: string;
+  autoEnrollmentEnabled?: boolean;
+  welcomeMessage?: string;
 }
 
 export interface Unit {
@@ -72,7 +75,7 @@ export interface Athlete {
   team: string;
   plan: string;
   hasUniform: boolean;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'pendente_validacao';
   paymentStatus: 'paid' | 'pending' | 'overdue';
   lastPayment: string;
   enrollmentDate: string;
@@ -81,6 +84,7 @@ export interface Athlete {
   studentCpf?: string;
   parentCpf?: string;
   parentAddress?: string;
+  registrationOrigin?: 'manual' | 'auto_matricula';
 }
 
 export interface Transaction {
