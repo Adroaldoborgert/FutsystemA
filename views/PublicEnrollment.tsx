@@ -3,12 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { 
   User, 
-  Calendar, 
-  CreditCard, 
   Phone, 
   MapPin, 
   CheckCircle2, 
-  ArrowRight, 
   Loader2,
   ShieldCheck,
   AlertCircle
@@ -38,38 +35,44 @@ const PublicEnrollment: React.FC<PublicEnrollmentProps> = ({ slug }) => {
   useEffect(() => {
     async function loadSchool() {
       try {
-        // Tenta buscar por slug, se falhar ou não encontrar, tenta por ID (fallback)
-        let { data, error: err } = await supabase
+        setLoading(true);
+        // Filtro OR robusto no Supabase
+        const { data, error: err } = await supabase
           .from('schools')
           .select('*')
-          .or(`slug.eq.${slug},id.eq.${slug}`)
-          .single();
+          .or(`slug.eq."${slug}",id.eq."${slug}"`)
+          .maybeSingle();
 
-        if (err || !data) {
-          setError("Escola não encontrada.");
+        if (err) throw err;
+
+        if (!data) {
+          setError("Escola não encontrada. Verifique o link enviado.");
         } else if (data.auto_enrollment_enabled === false) {
-          setError("Matrículas temporariamente indisponíveis.");
+          setError("As matrículas online estão desativadas para esta unidade.");
         } else {
           setSchool(data);
+          setError(null);
         }
       } catch (e) {
-        setError("Erro ao carregar dados da escola.");
+        console.error("Erro ao carregar escola:", e);
+        setError("Erro ao carregar dados da escola. Tente novamente mais tarde.");
       } finally {
         setLoading(false);
       }
     }
-    loadSchool();
+    if (slug) loadSchool();
   }, [slug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!school) return;
     setSubmitting(true);
 
     try {
       const { error: insertErr } = await supabase.from('athletes').insert([{
         school_id: school.id,
         name: formData.studentName,
-        birth_date: formData.studentBirth,
+        birth_date: formData.studentBirth || null,
         student_cpf: formData.studentCpf,
         parent_name: formData.parentName,
         parent_phone: formData.parentPhone,
@@ -82,8 +85,9 @@ const PublicEnrollment: React.FC<PublicEnrollmentProps> = ({ slug }) => {
 
       if (insertErr) throw insertErr;
       setSuccess(true);
-    } catch (err) {
-      alert("Erro ao enviar solicitação. Por favor, tente novamente.");
+    } catch (err: any) {
+      console.error("Erro ao enviar:", err);
+      alert("Erro ao enviar solicitação: " + (err.message || "Tente novamente."));
     } finally {
       setSubmitting(false);
     }
@@ -91,8 +95,9 @@ const PublicEnrollment: React.FC<PublicEnrollmentProps> = ({ slug }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="animate-spin text-brand-purple" size={40} />
+        <p className="text-slate-400 font-bold italic uppercase tracking-widest text-xs">Carregando formulário...</p>
       </div>
     );
   }
@@ -102,8 +107,9 @@ const PublicEnrollment: React.FC<PublicEnrollmentProps> = ({ slug }) => {
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
         <div className="bg-white p-10 rounded-[20px] shadow-xl text-center max-w-md w-full border border-slate-100">
           <AlertCircle size={48} className="text-amber-500 mx-auto mb-4" />
-          <h2 className="text-xl font-black text-slate-800 uppercase italic mb-2">{error}</h2>
-          <p className="text-slate-400 text-sm font-medium">Entre em contato diretamente com a unidade para mais informações.</p>
+          <h2 className="text-xl font-black text-slate-800 uppercase italic mb-2">Ops!</h2>
+          <p className="text-slate-400 text-sm font-medium mb-6">{error}</p>
+          <button onClick={() => window.location.reload()} className="text-brand-purple font-black uppercase text-[10px] tracking-widest hover:underline italic">Tentar Novamente</button>
         </div>
       </div>
     );
@@ -141,131 +147,69 @@ const PublicEnrollment: React.FC<PublicEnrollmentProps> = ({ slug }) => {
 
         <form onSubmit={handleSubmit} className="bg-white rounded-[20px] shadow-xl border border-slate-100 overflow-hidden">
           <div className="p-8 space-y-8">
-            {/* Seção Aluno */}
             <div className="space-y-6">
               <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                  <User size={20} />
-                </div>
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><User size={20} /></div>
                 <h3 className="font-black text-slate-800 uppercase italic text-sm tracking-tighter">Dados do Aluno</h3>
               </div>
-              
               <div className="grid grid-cols-1 gap-5">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo *</label>
-                  <input 
-                    required 
-                    type="text"
-                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm"
-                    placeholder="Nome do atleta"
-                    value={formData.studentName}
-                    onChange={e => setFormData({...formData, studentName: e.target.value})}
-                  />
+                  <input required type="text" className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm" placeholder="Nome do atleta" value={formData.studentName} onChange={e => setFormData({...formData, studentName: e.target.value})} />
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data de Nascimento *</label>
-                    <input 
-                      required 
-                      type="date"
-                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm"
-                      value={formData.studentBirth}
-                      onChange={e => setFormData({...formData, studentBirth: e.target.value})}
-                    />
+                    <input required type="date" className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm" value={formData.studentBirth} onChange={e => setFormData({...formData, studentBirth: e.target.value})} />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CPF do Aluno (Opcional)</label>
-                    <input 
-                      type="text"
-                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm"
-                      placeholder="000.000.000-00"
-                      value={formData.studentCpf}
-                      onChange={e => setFormData({...formData, studentCpf: e.target.value})}
-                    />
+                    <input type="text" className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm" placeholder="000.000.000-00" value={formData.studentCpf} onChange={e => setFormData({...formData, studentCpf: e.target.value})} />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Seção Responsável */}
             <div className="space-y-6 pt-4">
               <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
-                <div className="p-2 bg-brand-purple/10 text-brand-purple rounded-lg">
-                  <ShieldCheck size={20} />
-                </div>
+                <div className="p-2 bg-brand-purple/10 text-brand-purple rounded-lg"><ShieldCheck size={20} /></div>
                 <h3 className="font-black text-slate-800 uppercase italic text-sm tracking-tighter">Dados do Responsável</h3>
               </div>
-
               <div className="grid grid-cols-1 gap-5">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Responsável *</label>
-                  <input 
-                    required 
-                    type="text"
-                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm"
-                    placeholder="Pai, mãe ou tutor"
-                    value={formData.parentName}
-                    onChange={e => setFormData({...formData, parentName: e.target.value})}
-                  />
+                  <input required type="text" className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm" placeholder="Pai, mãe ou tutor" value={formData.parentName} onChange={e => setFormData({...formData, parentName: e.target.value})} />
                 </div>
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp *</label>
                     <div className="relative">
                       <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                      <input 
-                        required 
-                        type="text"
-                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm"
-                        placeholder="(00) 00000-0000"
-                        value={formData.parentPhone}
-                        onChange={e => setFormData({...formData, parentPhone: e.target.value})}
-                      />
+                      <input required type="text" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm" placeholder="(00) 00000-0000" value={formData.parentPhone} onChange={e => setFormData({...formData, parentPhone: e.target.value})} />
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CPF Responsável</label>
-                    <input 
-                      type="text"
-                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm"
-                      placeholder="000.000.000-00"
-                      value={formData.parentCpf}
-                      onChange={e => setFormData({...formData, parentCpf: e.target.value})}
-                    />
+                    <input type="text" className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm" placeholder="000.000.000-00" value={formData.parentCpf} onChange={e => setFormData({...formData, parentCpf: e.target.value})} />
                   </div>
                 </div>
-
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço (Opcional)</label>
                   <div className="relative">
                     <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
-                    <input 
-                      type="text"
-                      className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm"
-                      placeholder="Rua, número, bairro"
-                      value={formData.parentAddress}
-                      onChange={e => setFormData({...formData, parentAddress: e.target.value})}
-                    />
+                    <input type="text" className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-brand-purple/10 font-bold text-sm" placeholder="Rua, número, bairro" value={formData.parentAddress} onChange={e => setFormData({...formData, parentAddress: e.target.value})} />
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
           <div className="p-8 bg-slate-50/50 border-t border-slate-100">
-            <button 
-              type="submit" 
-              disabled={submitting}
-              className="w-full py-4 bg-brand-purple text-white font-black rounded-2xl hover:opacity-90 transition-all flex items-center justify-center gap-3 uppercase italic tracking-widest text-xs shadow-xl shadow-brand-purple/20 active:scale-95"
-            >
-              {submitting ? <Loader2 className="animate-spin" /> : <ShieldCheck size={20} />}
+            <button type="submit" disabled={submitting} className="w-full py-4 bg-brand-purple text-white font-black rounded-2xl hover:opacity-90 transition-all flex items-center justify-center gap-3 uppercase italic tracking-widest text-xs shadow-xl shadow-brand-purple/20 active:scale-95">
+              {submitting ? <Loader2 className="animate-spin" /> : <CheckCircle2 size={20} />}
               Enviar Solicitação de Matrícula
             </button>
           </div>
         </form>
-
         <footer className="text-center">
           <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">Gestão Profissional by FutSystem SaaS</p>
         </footer>
